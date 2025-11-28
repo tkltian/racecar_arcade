@@ -932,170 +932,33 @@
         }
 
         function createCar() {
-            // Invisible collision box
             const carGeometry = new THREE.BoxGeometry(3, 1.5, 5);
             const carMaterial = new THREE.MeshStandardMaterial({ color: 0x0066ff, transparent: true, opacity: 0 });
             car.mesh = new THREE.Mesh(carGeometry, carMaterial);
             car.mesh.position.copy(car.position);
             scene.add(car.mesh);
 
-            const carColor = 0xff3300;  // Sporty red color
-            const metalMaterial = new THREE.MeshStandardMaterial({ color: carColor, metalness: 0.8, roughness: 0.2 });
-            const darkMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.5, roughness: 0.3 });
-            const chromeMaterial = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 1, roughness: 0.1 });
-            const glassMaterial = new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.4, metalness: 0.9, roughness: 0.1 });
+            // Simple hood visible from driver's view
+            const hoodGeometry = new THREE.BoxGeometry(2.5, 0.3, 2.5);
+            const hoodMaterial = new THREE.MeshStandardMaterial({ color: 0x0066ff });
+            const hood = new THREE.Mesh(hoodGeometry, hoodMaterial);
+            hood.position.set(0, -0.3, -2.2);
+            car.mesh.add(hood);
 
-            // Main body - sleek sports car shape
-            const bodyGroup = new THREE.Group();
-
-            // Lower body (main chassis)
-            const lowerBodyGeometry = new THREE.BoxGeometry(2.6, 0.6, 4.5);
-            const lowerBody = new THREE.Mesh(lowerBodyGeometry, metalMaterial);
-            lowerBody.position.set(0, -0.5, -1);
-            bodyGroup.add(lowerBody);
-
-            // Hood (sloped front)
-            const hoodShape = new THREE.Shape();
-            hoodShape.moveTo(-1.2, 0);
-            hoodShape.lineTo(1.2, 0);
-            hoodShape.lineTo(1.1, 0.3);
-            hoodShape.lineTo(-1.1, 0.3);
-            hoodShape.lineTo(-1.2, 0);
-            const hoodExtrudeSettings = { depth: 2.2, bevelEnabled: false };
-            const hoodGeometry = new THREE.ExtrudeGeometry(hoodShape, hoodExtrudeSettings);
-            const hood = new THREE.Mesh(hoodGeometry, metalMaterial);
-            hood.rotation.x = -Math.PI / 2;
-            hood.position.set(0, -0.2, -3.2);
-            bodyGroup.add(hood);
-
-            // Windshield frame
-            const windshieldFrameGeometry = new THREE.BoxGeometry(2.4, 0.1, 1.2);
-            const windshieldFrame = new THREE.Mesh(windshieldFrameGeometry, darkMaterial);
-            windshieldFrame.position.set(0, 0.2, -0.8);
-            windshieldFrame.rotation.x = -0.4;
-            bodyGroup.add(windshieldFrame);
-
-            // Side panels with curve
-            const sidePanelGeometry = new THREE.BoxGeometry(0.15, 0.8, 3.5);
-            const leftSidePanel = new THREE.Mesh(sidePanelGeometry, metalMaterial);
-            leftSidePanel.position.set(-1.35, -0.3, -1.5);
-            bodyGroup.add(leftSidePanel);
-            const rightSidePanel = new THREE.Mesh(sidePanelGeometry, metalMaterial);
-            rightSidePanel.position.set(1.35, -0.3, -1.5);
-            bodyGroup.add(rightSidePanel);
-
-            // Rear spoiler
-            const spoilerWingGeometry = new THREE.BoxGeometry(2.8, 0.08, 0.4);
-            const spoilerWing = new THREE.Mesh(spoilerWingGeometry, metalMaterial);
-            spoilerWing.position.set(0, 0.4, 1.2);
-            bodyGroup.add(spoilerWing);
-
-            const spoilerSupportGeometry = new THREE.BoxGeometry(0.1, 0.5, 0.1);
-            const leftSpoilerSupport = new THREE.Mesh(spoilerSupportGeometry, darkMaterial);
-            leftSpoilerSupport.position.set(-1, 0.15, 1.2);
-            bodyGroup.add(leftSpoilerSupport);
-            const rightSpoilerSupport = new THREE.Mesh(spoilerSupportGeometry, darkMaterial);
-            rightSpoilerSupport.position.set(1, 0.15, 1.2);
-            bodyGroup.add(rightSpoilerSupport);
-
-            // Headlights
-            const headlightGeometry = new THREE.SphereGeometry(0.2, 16, 16);
-            const headlightMaterial = new THREE.MeshBasicMaterial({ color: 0xffffcc });
-            const leftHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
-            leftHeadlight.position.set(-0.8, -0.3, -3.3);
-            leftHeadlight.scale.set(1, 0.6, 0.5);
-            bodyGroup.add(leftHeadlight);
-            const rightHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
-            rightHeadlight.position.set(0.8, -0.3, -3.3);
-            rightHeadlight.scale.set(1, 0.6, 0.5);
-            bodyGroup.add(rightHeadlight);
-
-            // Taillights
-            const taillightGeometry = new THREE.BoxGeometry(0.4, 0.15, 0.05);
-            const taillightMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-            const leftTaillight = new THREE.Mesh(taillightGeometry, taillightMaterial);
-            leftTaillight.position.set(-0.9, -0.4, 1.3);
-            bodyGroup.add(leftTaillight);
-            const rightTaillight = new THREE.Mesh(taillightGeometry, taillightMaterial);
-            rightTaillight.position.set(0.9, -0.4, 1.3);
-            bodyGroup.add(rightTaillight);
-
-            // Wheels with rims
-            const wheelRadius = 0.4;
-            const wheelWidth = 0.3;
-            const wheelGeometry = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelWidth, 24);
-            const tireMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 });
-            const rimGeometry = new THREE.CylinderGeometry(wheelRadius * 0.7, wheelRadius * 0.7, wheelWidth + 0.02, 16);
-
-            const wheelPositions = [
-                { x: -1.3, y: -0.8, z: -2.2 },  // Front left
-                { x: 1.3, y: -0.8, z: -2.2 },   // Front right
-                { x: -1.3, y: -0.8, z: 0.8 },   // Rear left
-                { x: 1.3, y: -0.8, z: 0.8 }     // Rear right
-            ];
-
-            wheelPositions.forEach(pos => {
-                const wheelGroup = new THREE.Group();
-
-                const tire = new THREE.Mesh(wheelGeometry, tireMaterial);
-                tire.rotation.z = Math.PI / 2;
-                wheelGroup.add(tire);
-
-                const rim = new THREE.Mesh(rimGeometry, chromeMaterial);
-                rim.rotation.z = Math.PI / 2;
-                wheelGroup.add(rim);
-
-                // Rim spokes
-                for (let i = 0; i < 5; i++) {
-                    const spokeGeometry = new THREE.BoxGeometry(wheelRadius * 0.6, 0.05, 0.05);
-                    const spoke = new THREE.Mesh(spokeGeometry, chromeMaterial);
-                    spoke.rotation.z = (i / 5) * Math.PI * 2;
-                    spoke.position.x = pos.x > 0 ? 0.16 : -0.16;
-                    wheelGroup.add(spoke);
-                }
-
-                wheelGroup.position.set(pos.x, pos.y, pos.z);
-                bodyGroup.add(wheelGroup);
-            });
-
-            // Dashboard (visible from driver view)
-            const dashboardGeometry = new THREE.BoxGeometry(2.4, 0.4, 0.8);
-            const dashboard = new THREE.Mesh(dashboardGeometry, darkMaterial);
-            dashboard.position.set(0, -0.1, -0.6);
-            bodyGroup.add(dashboard);
-
-            // Instrument panel
-            const instrumentGeometry = new THREE.BoxGeometry(0.8, 0.3, 0.1);
-            const instrumentMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-            const instruments = new THREE.Mesh(instrumentGeometry, instrumentMaterial);
-            instruments.position.set(0, 0.05, -0.95);
-            instruments.rotation.x = -0.3;
-            bodyGroup.add(instruments);
+            // Dashboard
+            const dashboardGeometry = new THREE.BoxGeometry(2.5, 0.4, 0.8);
+            const dashboardMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+            const dashboard = new THREE.Mesh(dashboardGeometry, dashboardMaterial);
+            dashboard.position.set(0, -0.2, -0.8);
+            car.mesh.add(dashboard);
 
             // Steering wheel
-            const steeringWheelGeometry = new THREE.TorusGeometry(0.22, 0.03, 8, 24);
-            const steeringWheel = new THREE.Mesh(steeringWheelGeometry, darkMaterial);
-            steeringWheel.position.set(0, 0.15, -0.5);
-            steeringWheel.rotation.x = Math.PI / 3.5;
-            bodyGroup.add(steeringWheel);
-
-            // Steering wheel center
-            const steeringCenterGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.02, 16);
-            const steeringCenter = new THREE.Mesh(steeringCenterGeometry, chromeMaterial);
-            steeringCenter.position.set(0, 0.15, -0.5);
-            steeringCenter.rotation.x = Math.PI / 3.5;
-            bodyGroup.add(steeringCenter);
-
-            // Side mirrors
-            const mirrorGeometry = new THREE.BoxGeometry(0.15, 0.1, 0.2);
-            const leftMirror = new THREE.Mesh(mirrorGeometry, darkMaterial);
-            leftMirror.position.set(-1.5, 0.1, -1);
-            bodyGroup.add(leftMirror);
-            const rightMirror = new THREE.Mesh(mirrorGeometry, darkMaterial);
-            rightMirror.position.set(1.5, 0.1, -1);
-            bodyGroup.add(rightMirror);
-
-            car.mesh.add(bodyGroup);
+            const wheelGeometry = new THREE.TorusGeometry(0.25, 0.04, 8, 16);
+            const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x111111 });
+            const steeringWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+            steeringWheel.position.set(0, 0.1, -0.6);
+            steeringWheel.rotation.x = Math.PI / 4;
+            car.mesh.add(steeringWheel);
         }
 
         function createRamps() {
@@ -1643,8 +1506,9 @@
                 (leftPostZ + rightPostZ) / 2
             );
 
-            // Calculate rotation to span between posts (perpendicular to track)
-            const bannerAngle = Math.atan2(rightPostX - leftPostX, rightPostZ - leftPostZ);
+            // Calculate rotation to span between posts
+            // PlaneGeometry width is along X axis, so we need rotation that aligns X with left-to-right direction
+            const bannerAngle = Math.atan2(leftPostZ - rightPostZ, rightPostX - leftPostX);
             banner.rotation.y = bannerAngle;
             scene.add(banner);
 

@@ -452,16 +452,22 @@
         }
 
         @media (max-width: 768px) {
-            #touch-controls {
-                display: block;
-            }
             #instructions {
                 display: none !important;
+            }
+            body.menu-active {
+                overflow-y: auto;
+                touch-action: auto;
+            }
+            body.menu-active #home-page {
+                min-height: 100vh;
+                height: auto;
+                padding-bottom: 40px;
             }
         }
     </style>
 </head>
-<body>
+<body class="menu-active">
     <!-- Home Page -->
     <div id="home-page">
         <h1>Rapid Racing</h1>
@@ -1021,6 +1027,7 @@
         document.addEventListener('DOMContentLoaded', drawAllTrackPreviews);
 
         function startGame() {
+            document.body.classList.remove('menu-active');
             document.getElementById('home-page').style.display = 'none';
             document.getElementById('game-container').style.display = 'block';
             document.getElementById('ui').style.display = 'block';
@@ -1051,6 +1058,7 @@
             document.getElementById('touch-controls').style.display = 'none';
             document.getElementById('minimap-container').style.display = 'none';
             document.getElementById('home-page').style.display = 'flex';
+            document.body.classList.add('menu-active');
         }
 
         function cleanupGame() {

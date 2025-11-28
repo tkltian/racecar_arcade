@@ -1692,7 +1692,8 @@
                 const lateralOffset = (Math.random() - 0.5) * (TRACK_WIDTH - 10);
                 const padX = wp.x + perpX * lateralOffset;
                 const padZ = wp.z + perpZ * lateralOffset;
-                const padRadius = 3;
+                // Baby mode: 2x bigger launch pads for easier hitting
+                const padRadius = gameSettings.difficulty === 'baby' ? 6 : 3;
 
                 const bouncePadGroup = new THREE.Group();
 

@@ -1066,6 +1066,15 @@
         let opponentFinishTime = null;
         let isPenaltyActive = false;
 
+        // Connection resilience
+        let currentRoomCode = null;
+        let heartbeatInterval = null;
+        let lastHeartbeat = 0;
+        let reconnectAttempts = 0;
+        const MAX_RECONNECT_ATTEMPTS = 5;
+        const HEARTBEAT_INTERVAL = 2000; // 2 seconds
+        const HEARTBEAT_TIMEOUT = 6000; // 6 seconds without heartbeat = disconnected
+
         // ICE servers for WebRTC NAT traversal
         const peerConfig = {
             config: {
@@ -1110,6 +1119,8 @@
 
         function hostGame() {
             const roomCode = generateRoomCode();
+            currentRoomCode = roomCode;
+            reconnectAttempts = 0;
             document.getElementById('room-code').textContent = roomCode;
             document.getElementById('host-status').textContent = 'Waiting for player to join...';
 
@@ -1169,6 +1180,8 @@
                 return;
             }
 
+            currentRoomCode = code;
+            reconnectAttempts = 0;
             document.getElementById('join-status').textContent = 'Connecting...';
 
             // Create peer for joining with ICE config
@@ -1222,11 +1235,27 @@
 
         function setupConnection() {
             multiplayerActive = true;
+            lastHeartbeat = Date.now();
+            reconnectAttempts = 0;
+
+            // Start heartbeat
+            startHeartbeat();
 
             conn.on('data', function(data) {
+                // Update heartbeat on any data received
+                lastHeartbeat = Date.now();
+
                 if (data.type === 'position') {
                     opponentData = data;
                     updateOpponentCar();
+                } else if (data.type === 'heartbeat') {
+                    // Respond to heartbeat
+                    if (conn && conn.open) {
+                        conn.send({ type: 'heartbeat-ack' });
+                    }
+                } else if (data.type === 'heartbeat-ack') {
+                    // Heartbeat acknowledged, connection is healthy
+                    lastHeartbeat = Date.now();
                 } else if (data.type === 'start') {
                     // Other player (host) started the game - apply their settings
                     if (!gameStarted) {
@@ -1251,19 +1280,100 @@
 
             conn.on('close', function() {
                 console.log('Connection closed');
-                multiplayerActive = false;
+                stopHeartbeat();
+
                 if (gameStarted && !gameFinished) {
-                    const msg = document.getElementById('message');
-                    msg.innerHTML = '<span style="color: #ff6b6b;">Opponent disconnected!</span>';
-                    msg.style.display = 'block';
-                    setTimeout(() => {
-                        if (!gameFinished) msg.style.display = 'none';
-                    }, 3000);
+                    // Try to reconnect during active game
+                    attemptReconnect();
+                } else {
+                    multiplayerActive = false;
+                }
+            });
+
+            conn.on('error', function(err) {
+                console.error('Connection error:', err);
+                if (gameStarted && !gameFinished) {
+                    attemptReconnect();
                 }
             });
         }
 
+        function startHeartbeat() {
+            stopHeartbeat(); // Clear any existing
+            heartbeatInterval = setInterval(function() {
+                if (conn && conn.open) {
+                    conn.send({ type: 'heartbeat' });
+
+                    // Check if we've received anything recently
+                    if (Date.now() - lastHeartbeat > HEARTBEAT_TIMEOUT) {
+                        console.log('Heartbeat timeout - connection may be lost');
+                        if (gameStarted && !gameFinished) {
+                            attemptReconnect();
+                        }
+                    }
+                }
+            }, HEARTBEAT_INTERVAL);
+        }
+
+        function stopHeartbeat() {
+            if (heartbeatInterval) {
+                clearInterval(heartbeatInterval);
+                heartbeatInterval = null;
+            }
+        }
+
+        function attemptReconnect() {
+            if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                console.log('Max reconnect attempts reached');
+                multiplayerActive = false;
+                const msg = document.getElementById('message');
+                msg.innerHTML = '<span style="color: #ff6b6b;">Connection lost!</span>';
+                msg.style.display = 'block';
+                setTimeout(() => {
+                    if (!gameFinished) msg.style.display = 'none';
+                }, 3000);
+                return;
+            }
+
+            reconnectAttempts++;
+            console.log('Attempting reconnect... (' + reconnectAttempts + '/' + MAX_RECONNECT_ATTEMPTS + ')');
+
+            const msg = document.getElementById('message');
+            msg.innerHTML = '<span style="color: #feca57;">Reconnecting... (' + reconnectAttempts + '/' + MAX_RECONNECT_ATTEMPTS + ')</span>';
+            msg.style.display = 'block';
+
+            // Clean up old connection
+            if (conn) {
+                conn.close();
+                conn = null;
+            }
+
+            // Try to reconnect
+            setTimeout(function() {
+                if (isHost) {
+                    // Host waits for joiner to reconnect
+                    console.log('Host waiting for reconnection...');
+                } else {
+                    // Joiner tries to reconnect to host
+                    if (peer && currentRoomCode) {
+                        conn = peer.connect('rapid-racing-' + currentRoomCode, { reliable: true });
+                        if (conn) {
+                            conn.on('open', function() {
+                                console.log('Reconnected!');
+                                msg.style.display = 'none';
+                                setupConnection();
+                            });
+                            conn.on('error', function() {
+                                attemptReconnect();
+                            });
+                        }
+                    }
+                }
+            }, 1000);
+        }
+
         function cancelMultiplayer() {
+            stopHeartbeat();
             if (conn) {
                 conn.close();
                 conn = null;
@@ -1274,6 +1384,8 @@
             }
             multiplayerActive = false;
             isHost = false;
+            currentRoomCode = null;
+            reconnectAttempts = 0;
             closeMultiplayerLobby();
         }
 
@@ -1731,13 +1843,23 @@
             stopAllSounds();
 
             // Clean up multiplayer
+            stopHeartbeat();
             if (opponentCar && scene) {
                 scene.remove(opponentCar);
                 opponentCar = null;
             }
             opponentFinishTime = null;
             isPenaltyActive = false;
-            // Keep connection alive if still connected
+            // Clean up connection when leaving game
+            if (conn) {
+                conn.close();
+                conn = null;
+            }
+            if (peer) {
+                peer.destroy();
+                peer = null;
+            }
+            multiplayerActive = false;
 
             document.getElementById('game-container').style.display = 'none';
             document.getElementById('ui').style.display = 'none';

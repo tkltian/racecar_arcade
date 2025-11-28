@@ -832,25 +832,27 @@
                     { start: 0.93, end: 0.97, rate: -0.15 },  // Medium left to finish
                 ];
             } else if (layout === 'mountain') {
-                // 2x longer: Switchbacks and mountain sweepers
+                // 2x longer: Mountain road with switchbacks - designed to not self-intersect
+                // Alternates direction but keeps progressing forward overall
                 return [
-                    // Climb with sweeping curves
-                    { start: 0.04, end: 0.12, rate: 0.08 },   // Wide right bend
-                    // First switchback
-                    { start: 0.16, end: 0.23, rate: -0.42 },  // Hairpin left
-                    // Sweeping descent
-                    { start: 0.28, end: 0.36, rate: 0.06 },   // Wide right
+                    // Initial climb - gentle right
+                    { start: 0.03, end: 0.08, rate: 0.10 },   // Medium right
+                    // First switchback - turn back left but not too far
+                    { start: 0.12, end: 0.18, rate: -0.18 },  // Switchback left
+                    // Continue climb
+                    { start: 0.22, end: 0.27, rate: 0.12 },   // Right bend
                     // Second switchback
-                    { start: 0.40, end: 0.47, rate: 0.45 },   // Hairpin right
-                    // Long straight section (0.47-0.52)
-                    // S-curves
-                    { start: 0.53, end: 0.58, rate: -0.10 },  // Medium left
-                    { start: 0.60, end: 0.65, rate: 0.12 },   // Medium right
+                    { start: 0.31, end: 0.37, rate: -0.16 },  // Switchback left
+                    // Sweeping mountain curve
+                    { start: 0.42, end: 0.50, rate: 0.08 },   // Long right sweeper
                     // Third switchback
-                    { start: 0.70, end: 0.77, rate: -0.40 },  // Hairpin left
-                    // Final sweeping section
-                    { start: 0.82, end: 0.92, rate: 0.05 },   // Long wide right
-                    { start: 0.95, end: 0.98, rate: -0.08 },  // Gentle left to finish
+                    { start: 0.55, end: 0.61, rate: -0.14 },  // Switchback left
+                    // Descent curves
+                    { start: 0.66, end: 0.72, rate: 0.10 },   // Right curve
+                    // Final switchback
+                    { start: 0.77, end: 0.83, rate: -0.12 },  // Switchback left
+                    // Exit sweeper
+                    { start: 0.88, end: 0.95, rate: 0.06 },   // Gentle right to finish
                 ];
             } else if (layout === 'coastal') {
                 // 2x longer: Flowing coastal road with varying curves

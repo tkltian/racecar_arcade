@@ -1497,11 +1497,13 @@
             }
 
             if (Math.abs(car.speed) > 0.01) {
+                // Half turning capability when in air
+                const turnSpeed = isInAir ? CAR_TURN_SPEED / 2 : CAR_TURN_SPEED;
                 if (isKeyPressed('ArrowLeft')) {
-                    car.rotation += CAR_TURN_SPEED * Math.sign(car.speed);
+                    car.rotation += turnSpeed * Math.sign(car.speed);
                 }
                 if (isKeyPressed('ArrowRight')) {
-                    car.rotation -= CAR_TURN_SPEED * Math.sign(car.speed);
+                    car.rotation -= turnSpeed * Math.sign(car.speed);
                 }
             }
 

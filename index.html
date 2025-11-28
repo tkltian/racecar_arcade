@@ -534,7 +534,8 @@
             mesh: null,
             velocityY: 0,
             isJumping: false,
-            onRamp: false
+            onRamp: false,
+            wasColliding: false  // Track if we were already colliding (for one-time damage)
         };
         let keys = {};
         let touchKeys = {};
@@ -686,6 +687,7 @@
             car.velocityY = 0;
             car.isJumping = false;
             car.onRamp = false;
+            car.wasColliding = false;
 
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87CEEB);
@@ -821,11 +823,6 @@
 
             const trackMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
             const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-            const wallMaterial = new THREE.MeshBasicMaterial({
-                color: 0xffffff,
-                transparent: true,
-                opacity: 0.1
-            });
 
             // Create track segments following the waypoints
             for (let i = 0; i < trackWaypoints.length - 1; i++) {
@@ -892,28 +889,7 @@
                 );
                 scene.add(rightLine);
 
-                // Invisible walls for collision
-                const wallGeometry = new THREE.BoxGeometry(0.5, WALL_HEIGHT, segmentLength + 1);
-
-                const leftWall = new THREE.Mesh(wallGeometry, wallMaterial);
-                leftWall.rotation.y = segmentAngle;
-                leftWall.position.set(
-                    (wp1.x + wp2.x) / 2 - perpX * (TRACK_WIDTH / 2 + 0.25),
-                    WALL_HEIGHT / 2,
-                    (wp1.z + wp2.z) / 2 - perpZ * (TRACK_WIDTH / 2 + 0.25)
-                );
-                scene.add(leftWall);
-
-                const rightWall = new THREE.Mesh(wallGeometry, wallMaterial);
-                rightWall.rotation.y = segmentAngle;
-                rightWall.position.set(
-                    (wp1.x + wp2.x) / 2 + perpX * (TRACK_WIDTH / 2 + 0.25),
-                    WALL_HEIGHT / 2,
-                    (wp1.z + wp2.z) / 2 + perpZ * (TRACK_WIDTH / 2 + 0.25)
-                );
-                scene.add(rightWall);
-
-                // Store wall segments for collision detection
+                // Store wall segments for collision detection (no visual mesh needed)
                 walls.push({
                     x1: wp1.x - perpX * (TRACK_WIDTH / 2),
                     z1: wp1.z - perpZ * (TRACK_WIDTH / 2),
@@ -1810,9 +1786,17 @@
                 collided = true;
             }
 
-            // Only apply collision damage if not on a ramp (ramps shouldn't hurt the car)
-            if (collided && !car.onRamp && currentTime - lastCollisionTime > collisionCooldown) {
-                applyCollisionEffect();
+            // Only apply collision damage once when ENTERING a collision
+            // (not continuously while staying in collision)
+            if (collided && !car.onRamp) {
+                if (!car.wasColliding) {
+                    // Just entered a collision - apply damage once
+                    applyCollisionEffect();
+                }
+                car.wasColliding = true;
+            } else {
+                // No longer colliding - reset the flag
+                car.wasColliding = false;
             }
         }
 
@@ -1874,6 +1858,7 @@
             car.velocityY = 0;
             car.isJumping = false;
             car.onRamp = false;
+            car.wasColliding = false;
             gameTime = 0;
             gameStarted = false;
             gameFinished = false;

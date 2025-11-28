@@ -770,7 +770,12 @@
         <div id="mp-connected" class="mp-section" style="display: none;">
             <p class="mp-connected-msg">Connected! Ready to race!</p>
             <p id="opponent-name">Opponent connected</p>
-            <button class="mp-btn start-btn" onclick="startMultiplayerGame()">Start Race</button>
+            <div id="mp-host-controls">
+                <button class="mp-btn start-btn" onclick="startMultiplayerGame()">Start Race</button>
+            </div>
+            <div id="mp-joiner-controls" style="display: none;">
+                <p style="color: #feca57;">Waiting for host to start...</p>
+            </div>
             <button class="mp-btn cancel-btn" onclick="cancelMultiplayer()">Leave</button>
         </div>
 
@@ -1129,10 +1134,12 @@
                     document.getElementById('host-status').textContent = 'Player connected!';
                     setupConnection();
 
-                    // Show connected state
+                    // Show connected state (host sees start button)
                     setTimeout(() => {
                         document.getElementById('mp-hosting').style.display = 'none';
                         document.getElementById('mp-connected').style.display = 'block';
+                        document.getElementById('mp-host-controls').style.display = 'block';
+                        document.getElementById('mp-joiner-controls').style.display = 'none';
                     }, 500);
                 });
 
@@ -1182,8 +1189,11 @@
                     console.log('Connected to host!');
                     setupConnection();
 
+                    // Show connected state (joiner waits for host to start)
                     document.getElementById('mp-joining').style.display = 'none';
                     document.getElementById('mp-connected').style.display = 'block';
+                    document.getElementById('mp-host-controls').style.display = 'none';
+                    document.getElementById('mp-joiner-controls').style.display = 'block';
                 });
 
                 conn.on('error', function(err) {

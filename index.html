@@ -1619,9 +1619,34 @@
             }
         }
 
+        // Check if a position is on the track
+        function isOnTrack(x, z) {
+            // Find the closest point on the track centerline
+            let minDist = Infinity;
+
+            for (let i = 0; i < trackWaypoints.length - 1; i++) {
+                const wp1 = trackWaypoints[i];
+                const wp2 = trackWaypoints[i + 1];
+
+                // Find closest point on this segment
+                const closest = closestPointOnSegment(x, z, wp1.x, wp1.z, wp2.x, wp2.z);
+                const dx = x - closest.x;
+                const dz = z - closest.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+
+                if (dist < minDist) {
+                    minDist = dist;
+                }
+            }
+
+            // Check if within track width (with a small margin)
+            return minDist < (TRACK_WIDTH / 2 + 2);
+        }
+
         function updateCarPhysics() {
             // Apply gravity when jumping
             if (car.isJumping || car.position.y > 1.01) {
+                const wasInAir = car.position.y > 1.1;
                 car.velocityY -= GRAVITY;
                 car.position.y += car.velocityY;
 
@@ -1629,8 +1654,22 @@
                     car.position.y = 1;
                     car.velocityY = 0;
                     car.isJumping = false;
+
+                    // Check if landed outside the track
+                    if (wasInAir && !isOnTrack(car.position.x, car.position.z)) {
+                        triggerOffTrackGameOver();
+                    }
                 }
             }
+        }
+
+        function triggerOffTrackGameOver() {
+            gameOver = true;
+            gameFinished = true;
+            const message = document.getElementById('message');
+            message.innerHTML = `WASTED!<br><span style="font-size: 24px; color: #ff6b6b;">Landed off the track!</span><br><span style="font-size: 20px;">Press SPACE to try again</span>`;
+            message.style.display = 'block';
+            message.style.color = '#ff0000';
         }
 
         function updateCar(delta) {

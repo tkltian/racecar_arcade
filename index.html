@@ -479,9 +479,9 @@
         };
 
         const TRACK_LENGTHS = {
-            short: 400,
-            medium: 800,
-            long: 1200
+            short: 800,
+            medium: 1600,
+            long: 2400
         };
 
         // Labubu colors based on Pop Mart "Big Into Energy" series
@@ -760,65 +760,193 @@
             return keys[key] || touchKeys[key];
         }
 
-        function createTrack() {
-            const trackGeometry = new THREE.PlaneGeometry(TRACK_WIDTH, TRACK_LENGTH);
-            const trackMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
-            const track = new THREE.Mesh(trackGeometry, trackMaterial);
-            track.rotation.x = -Math.PI / 2;
-            track.position.z = -TRACK_LENGTH / 2;
-            track.receiveShadow = true;
-            scene.add(track);
+        // Track waypoints for curved path
+        let trackWaypoints = [];
 
-            const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-            for (let i = 0; i < TRACK_LENGTH / 20; i++) {
-                const dashGeometry = new THREE.PlaneGeometry(0.3, 8);
-                const dash = new THREE.Mesh(dashGeometry, lineMaterial);
-                dash.rotation.x = -Math.PI / 2;
-                dash.position.set(0, 0.01, -i * 20 - 4);
-                scene.add(dash);
+        function generateTrackWaypoints() {
+            trackWaypoints = [];
+            const segmentLength = 50;
+            const numSegments = Math.ceil(TRACK_LENGTH / segmentLength);
+            let x = 0, z = 0, angle = 0;
+
+            for (let i = 0; i <= numSegments; i++) {
+                trackWaypoints.push({ x, z, angle });
+
+                // Add curves at certain points
+                const progress = i / numSegments;
+                if (progress > 0.1 && progress < 0.2) {
+                    angle += 0.08; // Gentle right curve
+                } else if (progress > 0.25 && progress < 0.35) {
+                    angle -= 0.12; // Left curve
+                } else if (progress > 0.45 && progress < 0.55) {
+                    angle += 0.15; // Sharp right curve
+                } else if (progress > 0.6 && progress < 0.7) {
+                    angle -= 0.1; // Left curve
+                } else if (progress > 0.8 && progress < 0.9) {
+                    angle += 0.08; // Gentle right curve
+                }
+
+                // Move forward in current direction
+                x += Math.sin(angle) * segmentLength;
+                z -= Math.cos(angle) * segmentLength;
             }
 
-            const lineGeometry = new THREE.PlaneGeometry(0.5, TRACK_LENGTH);
-            const leftLine = new THREE.Mesh(lineGeometry, lineMaterial);
-            leftLine.rotation.x = -Math.PI / 2;
-            leftLine.position.set(-TRACK_WIDTH / 2 + 1, 0.01, -TRACK_LENGTH / 2);
-            scene.add(leftLine);
+            return trackWaypoints;
+        }
 
-            const rightLine = new THREE.Mesh(lineGeometry, lineMaterial);
-            rightLine.rotation.x = -Math.PI / 2;
-            rightLine.position.set(TRACK_WIDTH / 2 - 1, 0.01, -TRACK_LENGTH / 2);
-            scene.add(rightLine);
+        function getTrackPositionAt(distance) {
+            const segmentLength = 50;
+            const segmentIndex = Math.floor(distance / segmentLength);
+            const segmentProgress = (distance % segmentLength) / segmentLength;
 
-            // Almost transparent walls - lets scenery show through
+            if (segmentIndex >= trackWaypoints.length - 1) {
+                return trackWaypoints[trackWaypoints.length - 1];
+            }
+            if (segmentIndex < 0) {
+                return trackWaypoints[0];
+            }
+
+            const wp1 = trackWaypoints[segmentIndex];
+            const wp2 = trackWaypoints[segmentIndex + 1];
+
+            return {
+                x: wp1.x + (wp2.x - wp1.x) * segmentProgress,
+                z: wp1.z + (wp2.z - wp1.z) * segmentProgress,
+                angle: wp1.angle + (wp2.angle - wp1.angle) * segmentProgress
+            };
+        }
+
+        function createTrack() {
+            generateTrackWaypoints();
+
+            const trackMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
+            const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
             const wallMaterial = new THREE.MeshBasicMaterial({
                 color: 0xffffff,
                 transparent: true,
-                opacity: 0.08
+                opacity: 0.1
             });
-            const wallGeometry = new THREE.BoxGeometry(0.5, WALL_HEIGHT, TRACK_LENGTH);
 
-            const leftWall = new THREE.Mesh(wallGeometry, wallMaterial);
-            leftWall.position.set(-TRACK_WIDTH / 2 - 0.25, WALL_HEIGHT / 2, -TRACK_LENGTH / 2);
-            scene.add(leftWall);
-            walls.push({ mesh: leftWall, type: 'left' });
+            // Create track segments following the waypoints
+            for (let i = 0; i < trackWaypoints.length - 1; i++) {
+                const wp1 = trackWaypoints[i];
+                const wp2 = trackWaypoints[i + 1];
 
-            const rightWall = new THREE.Mesh(wallGeometry, wallMaterial);
-            rightWall.position.set(TRACK_WIDTH / 2 + 0.25, WALL_HEIGHT / 2, -TRACK_LENGTH / 2);
-            scene.add(rightWall);
-            walls.push({ mesh: rightWall, type: 'right' });
+                const dx = wp2.x - wp1.x;
+                const dz = wp2.z - wp1.z;
+                const segmentLength = Math.sqrt(dx * dx + dz * dz);
+                const segmentAngle = Math.atan2(dx, -dz);
 
+                // Track segment
+                const segmentGeometry = new THREE.PlaneGeometry(TRACK_WIDTH, segmentLength + 1);
+                const segment = new THREE.Mesh(segmentGeometry, trackMaterial);
+                segment.rotation.x = -Math.PI / 2;
+                segment.rotation.z = -segmentAngle;
+                segment.position.set(
+                    (wp1.x + wp2.x) / 2,
+                    0,
+                    (wp1.z + wp2.z) / 2
+                );
+                segment.receiveShadow = true;
+                scene.add(segment);
+
+                // Center line dashes
+                const numDashes = Math.floor(segmentLength / 20);
+                for (let d = 0; d < numDashes; d++) {
+                    const dashProgress = d / numDashes;
+                    const dashX = wp1.x + dx * dashProgress;
+                    const dashZ = wp1.z + dz * dashProgress;
+
+                    const dashGeometry = new THREE.PlaneGeometry(0.3, 8);
+                    const dash = new THREE.Mesh(dashGeometry, lineMaterial);
+                    dash.rotation.x = -Math.PI / 2;
+                    dash.rotation.z = -segmentAngle;
+                    dash.position.set(dashX, 0.01, dashZ);
+                    scene.add(dash);
+                }
+
+                // Side lines
+                const perpX = Math.cos(segmentAngle);
+                const perpZ = Math.sin(segmentAngle);
+
+                // Left and right edge lines
+                const lineGeometry = new THREE.PlaneGeometry(0.5, segmentLength + 1);
+
+                const leftLine = new THREE.Mesh(lineGeometry, lineMaterial);
+                leftLine.rotation.x = -Math.PI / 2;
+                leftLine.rotation.z = -segmentAngle;
+                leftLine.position.set(
+                    (wp1.x + wp2.x) / 2 - perpX * (TRACK_WIDTH / 2 - 1),
+                    0.01,
+                    (wp1.z + wp2.z) / 2 - perpZ * (TRACK_WIDTH / 2 - 1)
+                );
+                scene.add(leftLine);
+
+                const rightLine = new THREE.Mesh(lineGeometry, lineMaterial);
+                rightLine.rotation.x = -Math.PI / 2;
+                rightLine.rotation.z = -segmentAngle;
+                rightLine.position.set(
+                    (wp1.x + wp2.x) / 2 + perpX * (TRACK_WIDTH / 2 - 1),
+                    0.01,
+                    (wp1.z + wp2.z) / 2 + perpZ * (TRACK_WIDTH / 2 - 1)
+                );
+                scene.add(rightLine);
+
+                // Invisible walls for collision
+                const wallGeometry = new THREE.BoxGeometry(0.5, WALL_HEIGHT, segmentLength + 1);
+
+                const leftWall = new THREE.Mesh(wallGeometry, wallMaterial);
+                leftWall.rotation.y = segmentAngle;
+                leftWall.position.set(
+                    (wp1.x + wp2.x) / 2 - perpX * (TRACK_WIDTH / 2 + 0.25),
+                    WALL_HEIGHT / 2,
+                    (wp1.z + wp2.z) / 2 - perpZ * (TRACK_WIDTH / 2 + 0.25)
+                );
+                scene.add(leftWall);
+
+                const rightWall = new THREE.Mesh(wallGeometry, wallMaterial);
+                rightWall.rotation.y = segmentAngle;
+                rightWall.position.set(
+                    (wp1.x + wp2.x) / 2 + perpX * (TRACK_WIDTH / 2 + 0.25),
+                    WALL_HEIGHT / 2,
+                    (wp1.z + wp2.z) / 2 + perpZ * (TRACK_WIDTH / 2 + 0.25)
+                );
+                scene.add(rightWall);
+
+                // Store wall segments for collision detection
+                walls.push({
+                    x1: wp1.x - perpX * (TRACK_WIDTH / 2),
+                    z1: wp1.z - perpZ * (TRACK_WIDTH / 2),
+                    x2: wp2.x - perpX * (TRACK_WIDTH / 2),
+                    z2: wp2.z - perpZ * (TRACK_WIDTH / 2),
+                    type: 'left'
+                });
+                walls.push({
+                    x1: wp1.x + perpX * (TRACK_WIDTH / 2),
+                    z1: wp1.z + perpZ * (TRACK_WIDTH / 2),
+                    x2: wp2.x + perpX * (TRACK_WIDTH / 2),
+                    z2: wp2.z + perpZ * (TRACK_WIDTH / 2),
+                    type: 'right'
+                });
+            }
+
+            // Large grass area
             const grassMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22 });
-            const grassGeometry = new THREE.PlaneGeometry(100, TRACK_LENGTH);
+            const grassGeometry = new THREE.PlaneGeometry(500, 500);
+            const grass = new THREE.Mesh(grassGeometry, grassMaterial);
+            grass.rotation.x = -Math.PI / 2;
+            grass.position.set(0, -0.1, -TRACK_LENGTH / 2);
+            scene.add(grass);
 
-            const leftGrass = new THREE.Mesh(grassGeometry, grassMaterial);
-            leftGrass.rotation.x = -Math.PI / 2;
-            leftGrass.position.set(-TRACK_WIDTH / 2 - 52, -0.1, -TRACK_LENGTH / 2);
-            scene.add(leftGrass);
-
-            const rightGrass = new THREE.Mesh(grassGeometry, grassMaterial);
-            rightGrass.rotation.x = -Math.PI / 2;
-            rightGrass.position.set(TRACK_WIDTH / 2 + 52, -0.1, -TRACK_LENGTH / 2);
-            scene.add(rightGrass);
+            // More grass tiles to cover the curved track area
+            for (let gx = -2; gx <= 2; gx++) {
+                for (let gz = -4; gz <= 1; gz++) {
+                    const grassTile = new THREE.Mesh(grassGeometry, grassMaterial);
+                    grassTile.rotation.x = -Math.PI / 2;
+                    grassTile.position.set(gx * 400, -0.15, gz * 400);
+                    scene.add(grassTile);
+                }
+            }
         }
 
         function createCar() {
@@ -849,12 +977,23 @@
         }
 
         function createRamps() {
-            // Create bounce pads at strategic positions
+            // Create bounce pads at strategic positions along the curved track
             const rampCount = Math.floor(TRACK_LENGTH / 200);
 
             for (let i = 0; i < rampCount; i++) {
-                const padX = (Math.random() - 0.5) * (TRACK_WIDTH - 10);
-                const padZ = -100 - (i * 200) + (Math.random() * 50);
+                // Position along the track (use waypoints)
+                const trackProgress = (i + 1) / (rampCount + 1);
+                const waypointIndex = Math.floor(trackProgress * (trackWaypoints.length - 1));
+                const wp = trackWaypoints[waypointIndex];
+                const nextWp = trackWaypoints[Math.min(waypointIndex + 1, trackWaypoints.length - 1)];
+                const angle = Math.atan2(nextWp.x - wp.x, -(nextWp.z - wp.z));
+                const perpX = Math.cos(angle);
+                const perpZ = Math.sin(angle);
+
+                // Random offset from center of track
+                const lateralOffset = (Math.random() - 0.5) * (TRACK_WIDTH - 10);
+                const padX = wp.x + perpX * lateralOffset;
+                const padZ = wp.z + perpZ * lateralOffset;
                 const padRadius = 3;
 
                 const bouncePadGroup = new THREE.Group();
@@ -960,10 +1099,21 @@
             const obstacleCount = Math.floor(TRACK_LENGTH / 50);
             const obstaclePositions = [];
 
+            // Place obstacles along the curved track
             for (let i = 0; i < obstacleCount; i++) {
+                const trackProgress = (i + 0.5) / obstacleCount;
+                const waypointIndex = Math.floor(trackProgress * (trackWaypoints.length - 2)) + 1;
+                const wp = trackWaypoints[waypointIndex];
+                const nextWp = trackWaypoints[Math.min(waypointIndex + 1, trackWaypoints.length - 1)];
+                const trackAngle = Math.atan2(nextWp.x - wp.x, -(nextWp.z - wp.z));
+                const perpX = Math.cos(trackAngle);
+                const perpZ = Math.sin(trackAngle);
+
+                // Random offset from center of track
+                const lateralOffset = (Math.random() - 0.5) * (TRACK_WIDTH - 6);
                 obstaclePositions.push({
-                    x: (Math.random() - 0.5) * (TRACK_WIDTH - 6),
-                    z: -50 - (i * (TRACK_LENGTH - 100) / obstacleCount)
+                    x: wp.x + perpX * lateralOffset,
+                    z: wp.z + perpZ * lateralOffset
                 });
             }
 
@@ -1291,6 +1441,11 @@
         }
 
         function createFinishLine() {
+            // Get the last waypoint for finish line position
+            const lastWp = trackWaypoints[trackWaypoints.length - 1];
+            const prevWp = trackWaypoints[trackWaypoints.length - 2];
+            const finishAngle = Math.atan2(lastWp.x - prevWp.x, -(lastWp.z - prevWp.z));
+
             const finishGeometry = new THREE.PlaneGeometry(TRACK_WIDTH, 5);
             const canvas = document.createElement('canvas');
             canvas.width = 256;
@@ -1310,37 +1465,67 @@
             const finishMaterial = new THREE.MeshBasicMaterial({ map: finishTexture });
             const finishLine = new THREE.Mesh(finishGeometry, finishMaterial);
             finishLine.rotation.x = -Math.PI / 2;
-            finishLine.position.set(0, 0.02, -TRACK_LENGTH + 20);
+            finishLine.rotation.z = -finishAngle;
+            finishLine.position.set(lastWp.x, 0.02, lastWp.z);
             scene.add(finishLine);
+
+            // Store finish line position for collision detection
+            window.finishLinePos = { x: lastWp.x, z: lastWp.z };
+
+            const perpX = Math.cos(finishAngle);
+            const perpZ = Math.sin(finishAngle);
 
             const bannerGeometry = new THREE.BoxGeometry(TRACK_WIDTH + 4, 2, 0.5);
             const bannerMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
             const banner = new THREE.Mesh(bannerGeometry, bannerMaterial);
-            banner.position.set(0, 8, -TRACK_LENGTH + 20);
+            banner.rotation.y = finishAngle;
+            banner.position.set(lastWp.x, 8, lastWp.z);
             scene.add(banner);
 
             const supportGeometry = new THREE.CylinderGeometry(0.3, 0.3, 10, 8);
             const supportMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
             const leftSupport = new THREE.Mesh(supportGeometry, supportMaterial);
-            leftSupport.position.set(-TRACK_WIDTH / 2 - 1, 5, -TRACK_LENGTH + 20);
+            leftSupport.position.set(
+                lastWp.x - perpX * (TRACK_WIDTH / 2 + 1),
+                5,
+                lastWp.z - perpZ * (TRACK_WIDTH / 2 + 1)
+            );
             scene.add(leftSupport);
             const rightSupport = new THREE.Mesh(supportGeometry, supportMaterial);
-            rightSupport.position.set(TRACK_WIDTH / 2 + 1, 5, -TRACK_LENGTH + 20);
+            rightSupport.position.set(
+                lastWp.x + perpX * (TRACK_WIDTH / 2 + 1),
+                5,
+                lastWp.z + perpZ * (TRACK_WIDTH / 2 + 1)
+            );
             scene.add(rightSupport);
         }
 
         function createScenery() {
+            // Place trees along the curved track
             const treePositions = [];
-            for (let z = -50; z > -TRACK_LENGTH; z -= 40) {
-                treePositions.push({ x: -TRACK_WIDTH / 2 - 20, z: z });
-                treePositions.push({ x: TRACK_WIDTH / 2 + 20, z: z });
+            for (let i = 0; i < trackWaypoints.length; i += 2) {
+                const wp = trackWaypoints[i];
+                const nextWp = trackWaypoints[Math.min(i + 1, trackWaypoints.length - 1)];
+                const angle = Math.atan2(nextWp.x - wp.x, -(nextWp.z - wp.z));
+                const perpX = Math.cos(angle);
+                const perpZ = Math.sin(angle);
+
+                // Trees on both sides of track
+                treePositions.push({
+                    x: wp.x - perpX * (TRACK_WIDTH / 2 + 15 + Math.random() * 20),
+                    z: wp.z - perpZ * (TRACK_WIDTH / 2 + 15 + Math.random() * 20)
+                });
+                treePositions.push({
+                    x: wp.x + perpX * (TRACK_WIDTH / 2 + 15 + Math.random() * 20),
+                    z: wp.z + perpZ * (TRACK_WIDTH / 2 + 15 + Math.random() * 20)
+                });
             }
 
             treePositions.forEach(pos => {
                 const trunkGeometry = new THREE.CylinderGeometry(0.5, 0.7, 5, 8);
                 const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
                 const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
-                trunk.position.set(pos.x + (Math.random() - 0.5) * 10, 2.5, pos.z);
+                trunk.position.set(pos.x + (Math.random() - 0.5) * 5, 2.5, pos.z + (Math.random() - 0.5) * 5);
                 trunk.castShadow = true;
                 scene.add(trunk);
 
@@ -1532,31 +1717,69 @@
             camera.position.copy(car.position).add(cameraOffset);
             camera.rotation.y = car.rotation;
 
-            if (car.position.z < -TRACK_LENGTH + 25) {
-                finishGame();
+            // Check if reached finish line
+            if (window.finishLinePos) {
+                const distToFinish = Math.sqrt(
+                    Math.pow(car.position.x - window.finishLinePos.x, 2) +
+                    Math.pow(car.position.z - window.finishLinePos.z, 2)
+                );
+                if (distToFinish < 15) {
+                    finishGame();
+                }
             }
         }
 
         const CAR_HALF_WIDTH = 1.5;
+
+        // Helper function to find closest point on a line segment
+        function closestPointOnSegment(px, pz, x1, z1, x2, z2) {
+            const dx = x2 - x1;
+            const dz = z2 - z1;
+            const len2 = dx * dx + dz * dz;
+            if (len2 === 0) return { x: x1, z: z1 };
+
+            let t = ((px - x1) * dx + (pz - z1) * dz) / len2;
+            t = Math.max(0, Math.min(1, t));
+
+            return {
+                x: x1 + t * dx,
+                z: z1 + t * dz
+            };
+        }
 
         function checkCollisions(prevX, prevZ, moveX, moveZ) {
             const currentTime = Date.now();
             const collisionCooldown = 300;
             let collided = false;
 
-            const wallLimit = TRACK_WIDTH / 2 - CAR_HALF_WIDTH;
-
-            if (car.position.x < -wallLimit) {
-                car.position.x = -wallLimit;
-                collided = true;
-            }
-            if (car.position.x > wallLimit) {
-                car.position.x = wallLimit;
-                collided = true;
-            }
-
             const carRadius = CAR_HALF_WIDTH;
 
+            // Check wall segment collisions
+            for (const wall of walls) {
+                if (!wall.x1) continue; // Skip old-style walls
+
+                const closest = closestPointOnSegment(
+                    car.position.x, car.position.z,
+                    wall.x1, wall.z1, wall.x2, wall.z2
+                );
+
+                const dx = car.position.x - closest.x;
+                const dz = car.position.z - closest.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+
+                if (dist < carRadius) {
+                    // Push car away from wall
+                    if (dist > 0.01) {
+                        const nx = dx / dist;
+                        const nz = dz / dist;
+                        car.position.x = closest.x + nx * carRadius;
+                        car.position.z = closest.z + nz * carRadius;
+                    }
+                    collided = true;
+                }
+            }
+
+            // Check obstacle collisions
             obstacles.forEach(obstacle => {
                 const dx = car.position.x - obstacle.mesh.position.x;
                 const dz = car.position.z - obstacle.mesh.position.z;
@@ -1581,6 +1804,7 @@
                 }
             });
 
+            // Prevent going backwards past start
             if (car.position.z > 10) {
                 car.position.z = 10;
                 collided = true;
@@ -1678,7 +1902,22 @@
             const mph = Math.abs(car.speed * 60).toFixed(0);
             document.getElementById('speedometer').textContent = `${mph} MPH`;
             document.getElementById('timer').textContent = `Time: ${gameTime.toFixed(2)}s`;
-            const progress = Math.max(0, Math.min(100, (-car.position.z / (TRACK_LENGTH - 20)) * 100));
+
+            // Calculate progress along curved track
+            let closestDist = Infinity;
+            let closestIndex = 0;
+            for (let i = 0; i < trackWaypoints.length; i++) {
+                const wp = trackWaypoints[i];
+                const dist = Math.sqrt(
+                    Math.pow(car.position.x - wp.x, 2) +
+                    Math.pow(car.position.z - wp.z, 2)
+                );
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closestIndex = i;
+                }
+            }
+            const progress = Math.max(0, Math.min(100, (closestIndex / (trackWaypoints.length - 1)) * 100));
             document.getElementById('lap').textContent = `Progress: ${progress.toFixed(0)}%`;
         }
 

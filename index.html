@@ -1454,13 +1454,40 @@
             // Store finish line position for collision detection
             window.finishLinePos = { x: lastWp.x, z: lastWp.z };
 
+            // Calculate perpendicular direction (across the track)
             const perpX = Math.cos(finishAngle);
             const perpZ = Math.sin(finishAngle);
 
-            const bannerGeometry = new THREE.BoxGeometry(TRACK_WIDTH + 4, 2, 0.5);
-            const bannerMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            // Create banner with "FINISH" text
+            const bannerCanvas = document.createElement('canvas');
+            bannerCanvas.width = 512;
+            bannerCanvas.height = 128;
+            const bannerCtx = bannerCanvas.getContext('2d');
+
+            // Checkered background
+            const checkSize = 32;
+            for (let bx = 0; bx < bannerCanvas.width; bx += checkSize) {
+                for (let by = 0; by < bannerCanvas.height; by += checkSize) {
+                    bannerCtx.fillStyle = ((bx + by) / checkSize) % 2 === 0 ? '#ffffff' : '#000000';
+                    bannerCtx.fillRect(bx, by, checkSize, checkSize);
+                }
+            }
+
+            // "FINISH" text
+            bannerCtx.fillStyle = '#ff0000';
+            bannerCtx.font = 'bold 80px Arial';
+            bannerCtx.textAlign = 'center';
+            bannerCtx.textBaseline = 'middle';
+            bannerCtx.strokeStyle = '#ffffff';
+            bannerCtx.lineWidth = 4;
+            bannerCtx.strokeText('FINISH', bannerCanvas.width / 2, bannerCanvas.height / 2);
+            bannerCtx.fillText('FINISH', bannerCanvas.width / 2, bannerCanvas.height / 2);
+
+            const bannerTexture = new THREE.CanvasTexture(bannerCanvas);
+            const bannerGeometry = new THREE.PlaneGeometry(TRACK_WIDTH + 4, 3);
+            const bannerMaterial = new THREE.MeshBasicMaterial({ map: bannerTexture, side: THREE.DoubleSide });
             const banner = new THREE.Mesh(bannerGeometry, bannerMaterial);
-            banner.rotation.y = finishAngle;
+            banner.rotation.y = finishAngle + Math.PI / 2;  // Perpendicular to track direction
             banner.position.set(lastWp.x, 8, lastWp.z);
             scene.add(banner);
 
@@ -1468,16 +1495,16 @@
             const supportMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
             const leftSupport = new THREE.Mesh(supportGeometry, supportMaterial);
             leftSupport.position.set(
-                lastWp.x - perpX * (TRACK_WIDTH / 2 + 1),
+                lastWp.x - perpX * (TRACK_WIDTH / 2 + 2),
                 5,
-                lastWp.z - perpZ * (TRACK_WIDTH / 2 + 1)
+                lastWp.z - perpZ * (TRACK_WIDTH / 2 + 2)
             );
             scene.add(leftSupport);
             const rightSupport = new THREE.Mesh(supportGeometry, supportMaterial);
             rightSupport.position.set(
-                lastWp.x + perpX * (TRACK_WIDTH / 2 + 1),
+                lastWp.x + perpX * (TRACK_WIDTH / 2 + 2),
                 5,
-                lastWp.z + perpZ * (TRACK_WIDTH / 2 + 1)
+                lastWp.z + perpZ * (TRACK_WIDTH / 2 + 2)
             );
             scene.add(rightSupport);
         }

@@ -831,70 +831,109 @@
         }
 
         function createRamps() {
-            // Create ramps at strategic positions
+            // Create bounce pads at strategic positions
             const rampCount = Math.floor(TRACK_LENGTH / 200);
 
             for (let i = 0; i < rampCount; i++) {
-                const rampX = (Math.random() - 0.5) * (TRACK_WIDTH - 10);
-                const rampZ = -100 - (i * 200) + (Math.random() * 50);
+                const padX = (Math.random() - 0.5) * (TRACK_WIDTH - 10);
+                const padZ = -100 - (i * 200) + (Math.random() * 50);
+                const padRadius = 3;
 
-                // Ramp geometry (wedge shape)
-                const rampLength = 10;
-                const rampWidth = 6;
-                const rampHeight = 3;
+                const bouncePadGroup = new THREE.Group();
 
-                const rampShape = new THREE.Shape();
-                rampShape.moveTo(0, 0);
-                rampShape.lineTo(rampLength, 0);
-                rampShape.lineTo(rampLength, rampHeight);
-                rampShape.lineTo(0, 0);
+                // Base circle pad (transparent rainbow)
+                const padGeometry = new THREE.CylinderGeometry(padRadius, padRadius, 0.3, 32);
+                const padMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: 0.4
+                });
+                const pad = new THREE.Mesh(padGeometry, padMaterial);
+                pad.position.y = 0.15;
+                bouncePadGroup.add(pad);
 
-                const extrudeSettings = { depth: rampWidth, bevelEnabled: false };
-                const rampGeometry = new THREE.ExtrudeGeometry(rampShape, extrudeSettings);
-
-                const rampMaterial = new THREE.MeshStandardMaterial({
-                    color: 0xf39c12,
-                    roughness: 0.6
+                // Rainbow ring around the pad
+                const ringGeometry = new THREE.TorusGeometry(padRadius, 0.2, 8, 32);
+                const rainbowColors = [0xff0000, 0xff7700, 0xffff00, 0x00ff00, 0x0077ff, 0x8800ff];
+                rainbowColors.forEach((color, idx) => {
+                    const ringMaterial = new THREE.MeshBasicMaterial({
+                        color: color,
+                        transparent: true,
+                        opacity: 0.6
+                    });
+                    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                    ring.rotation.x = Math.PI / 2;
+                    ring.position.y = 0.1 + idx * 0.15;
+                    ring.scale.set(1 - idx * 0.1, 1 - idx * 0.1, 1);
+                    bouncePadGroup.add(ring);
                 });
 
-                const ramp = new THREE.Mesh(rampGeometry, rampMaterial);
-                ramp.rotation.y = -Math.PI / 2;  // Rotate to face -Z direction (toward finish line)
-                ramp.position.set(rampX - rampWidth / 2, 0, rampZ);
-                ramp.castShadow = true;
-                ramp.receiveShadow = true;
-                scene.add(ramp);
+                // Create 3D upward arrow
+                const arrowGroup = new THREE.Group();
 
-                // Arrow indicators on ramp
-                const arrowGeometry = new THREE.PlaneGeometry(2, 3);
-                const arrowCanvas = document.createElement('canvas');
-                arrowCanvas.width = 64;
-                arrowCanvas.height = 96;
-                const ctx = arrowCanvas.getContext('2d');
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath();
-                ctx.moveTo(32, 10);
-                ctx.lineTo(54, 50);
-                ctx.lineTo(42, 50);
-                ctx.lineTo(42, 86);
-                ctx.lineTo(22, 86);
-                ctx.lineTo(22, 50);
-                ctx.lineTo(10, 50);
-                ctx.closePath();
-                ctx.fill();
+                // Arrow shaft
+                const shaftGeometry = new THREE.CylinderGeometry(0.3, 0.3, 2, 8);
+                const shaftMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xffff00,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                const shaft = new THREE.Mesh(shaftGeometry, shaftMaterial);
+                shaft.position.y = 1.5;
+                arrowGroup.add(shaft);
 
-                const arrowTexture = new THREE.CanvasTexture(arrowCanvas);
-                const arrowMaterial = new THREE.MeshBasicMaterial({ map: arrowTexture, transparent: true });
-                const arrow = new THREE.Mesh(arrowGeometry, arrowMaterial);
-                arrow.rotation.x = -Math.PI / 2 + 0.2;
-                arrow.position.set(rampX, 0.8, rampZ - 2);
-                scene.add(arrow);
+                // Arrow head (cone)
+                const headGeometry = new THREE.ConeGeometry(0.8, 1.5, 8);
+                const headMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00ff00,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                const head = new THREE.Mesh(headGeometry, headMaterial);
+                head.position.y = 3.2;
+                arrowGroup.add(head);
+
+                // Add multiple smaller arrows around it for effect
+                for (let a = 0; a < 3; a++) {
+                    const smallArrow = new THREE.Group();
+                    const smallShaft = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.15, 0.15, 1, 6),
+                        new THREE.MeshBasicMaterial({
+                            color: rainbowColors[a * 2],
+                            transparent: true,
+                            opacity: 0.5
+                        })
+                    );
+                    smallShaft.position.y = 1;
+                    smallArrow.add(smallShaft);
+
+                    const smallHead = new THREE.Mesh(
+                        new THREE.ConeGeometry(0.4, 0.8, 6),
+                        new THREE.MeshBasicMaterial({
+                            color: rainbowColors[a * 2 + 1],
+                            transparent: true,
+                            opacity: 0.5
+                        })
+                    );
+                    smallHead.position.y = 1.9;
+                    smallArrow.add(smallHead);
+
+                    const angle = (a / 3) * Math.PI * 2;
+                    smallArrow.position.x = Math.cos(angle) * 1.5;
+                    smallArrow.position.z = Math.sin(angle) * 1.5;
+                    arrowGroup.add(smallArrow);
+                }
+
+                bouncePadGroup.add(arrowGroup);
+                bouncePadGroup.position.set(padX, 0, padZ);
+                bouncePadGroup.userData.arrowGroup = arrowGroup;
+                scene.add(bouncePadGroup);
 
                 ramps.push({
-                    x: rampX,
-                    z: rampZ,
-                    width: rampWidth,
-                    length: rampLength,
-                    height: rampHeight
+                    x: padX,
+                    z: padZ,
+                    radius: padRadius,
+                    mesh: bouncePadGroup
                 });
             }
         }
@@ -914,16 +953,18 @@
             const actualCount = Math.floor(obstaclePositions.length * difficultyMultiplier[gameSettings.difficulty]);
 
             obstaclePositions.slice(0, actualCount).forEach((pos, index) => {
-                // Check if position is on a ramp
-                let onRamp = false;
-                for (const ramp of ramps) {
-                    if (Math.abs(pos.x - ramp.x) < ramp.width / 2 + 3 &&
-                        pos.z > ramp.z - ramp.length - 5 && pos.z < ramp.z + 5) {
-                        onRamp = true;
+                // Check if position is on a bounce pad
+                let onPad = false;
+                for (const pad of ramps) {
+                    const dx = pos.x - pad.x;
+                    const dz = pos.z - pad.z;
+                    const distance = Math.sqrt(dx * dx + dz * dz);
+                    if (distance < pad.radius + 4) {
+                        onPad = true;
                         break;
                     }
                 }
-                if (onRamp) return;
+                if (onPad) return;
 
                 let obstacleMesh;
                 let radius;
@@ -1276,38 +1317,71 @@
             });
         }
 
-        function checkRamps() {
-            if (car.isJumping) {
-                car.onRamp = false;
-                return;
-            }
+        function updateBouncePads() {
+            const time = Date.now() * 0.003;
+            ramps.forEach((pad, index) => {
+                if (pad.mesh && pad.mesh.userData.arrowGroup) {
+                    const arrowGroup = pad.mesh.userData.arrowGroup;
+                    // Bobbing animation
+                    arrowGroup.position.y = Math.sin(time + index) * 0.3;
+                    // Slow rotation
+                    arrowGroup.rotation.y = time * 0.5;
 
-            car.onRamp = false; // Reset each frame
-
-            for (const ramp of ramps) {
-                const carX = car.position.x;
-                const carZ = car.position.z;
-
-                // Check if car is on ramp
-                if (Math.abs(carX - ramp.x) < ramp.width / 2 &&
-                    carZ < ramp.z && carZ > ramp.z - ramp.length) {
-
-                    // Calculate height on ramp
-                    const rampProgress = (ramp.z - carZ) / ramp.length;
-                    const rampY = rampProgress * ramp.height;
-
-                    if (car.position.y <= rampY + 1.1) {
-                        car.position.y = rampY + 1;
-                        car.onRamp = true; // Car is on a ramp
-
-                        // Launch when reaching top of ramp
-                        if (rampProgress > 0.9 && car.speed > 0.5) {
-                            car.velocityY = JUMP_VELOCITY * (car.speed / CAR_MAX_SPEED);
-                            car.isJumping = true;
-                            car.onRamp = false;
+                    // Pulse effect when recently bounced
+                    if (pad.mesh.userData.bounceTime) {
+                        const elapsed = Date.now() - pad.mesh.userData.bounceTime;
+                        if (elapsed < 500) {
+                            const scale = 1 + Math.sin(elapsed * 0.02) * 0.3;
+                            arrowGroup.scale.set(scale, scale, scale);
+                        } else {
+                            arrowGroup.scale.set(1, 1, 1);
+                            pad.mesh.userData.bounceTime = null;
                         }
                     }
                 }
+            });
+        }
+
+        function checkRamps() {
+            // Don't trigger bounce if already jumping high
+            if (car.isJumping && car.position.y > 2) {
+                return;
+            }
+
+            for (const pad of ramps) {
+                const dx = car.position.x - pad.x;
+                const dz = car.position.z - pad.z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+
+                // Check if car is on the bounce pad
+                if (distance < pad.radius && car.position.y < 2) {
+                    // Launch the car upward! Height based on speed
+                    const speedFactor = Math.max(0.3, car.speed / CAR_MAX_SPEED);
+                    car.velocityY = JUMP_VELOCITY * 1.5 * speedFactor;
+                    car.isJumping = true;
+                    car.onRamp = true; // Mark as on pad to prevent collision damage
+
+                    // Visual feedback - make arrows pulse (handled in animate)
+                    if (pad.mesh && pad.mesh.userData.arrowGroup) {
+                        pad.mesh.userData.bounceTime = Date.now();
+                    }
+                    break; // Only trigger one pad at a time
+                }
+            }
+
+            // Reset onRamp if not on any pad
+            let onAnyPad = false;
+            for (const pad of ramps) {
+                const dx = car.position.x - pad.x;
+                const dz = car.position.z - pad.z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                if (distance < pad.radius) {
+                    onAnyPad = true;
+                    break;
+                }
+            }
+            if (!onAnyPad && car.position.y <= 1.1) {
+                car.onRamp = false;
             }
         }
 
@@ -1541,6 +1615,7 @@
             }
 
             updateObstacles();
+            updateBouncePads();
             updateCar(delta);
             updateUI();
             renderer.render(scene, camera);

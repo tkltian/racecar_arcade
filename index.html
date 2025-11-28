@@ -2884,8 +2884,16 @@
             }
 
             // If car is outside track bounds, push it back toward centerline
+            // But if WAY off track, trigger game over instead
             const maxDist = TRACK_WIDTH / 2 - carRadius - 1;
+            const wastedDist = maxDist * 2;  // If this far off, car is wasted
             if (minDist > maxDist && closestPoint) {
+                if (minDist > wastedDist) {
+                    // Car is way off track - game over!
+                    triggerOffTrackGameOver();
+                    return;
+                }
+                // Just slightly off - push back (invisible wall)
                 const dx = car.position.x - closestPoint.x;
                 const dz = car.position.z - closestPoint.z;
                 if (minDist > 0.01) {

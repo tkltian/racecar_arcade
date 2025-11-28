@@ -1108,16 +1108,25 @@
 
             peer.on('connection', function(connection) {
                 conn = connection;
-                console.log('Player connected!');
-                document.getElementById('host-status').textContent = 'Player connected!';
+                console.log('Incoming connection...');
+                document.getElementById('host-status').textContent = 'Player connecting...';
 
-                setupConnection();
+                conn.on('open', function() {
+                    console.log('Connection open!');
+                    document.getElementById('host-status').textContent = 'Player connected!';
+                    setupConnection();
 
-                // Show connected state
-                setTimeout(() => {
-                    document.getElementById('mp-hosting').style.display = 'none';
-                    document.getElementById('mp-connected').style.display = 'block';
-                }, 500);
+                    // Show connected state
+                    setTimeout(() => {
+                        document.getElementById('mp-hosting').style.display = 'none';
+                        document.getElementById('mp-connected').style.display = 'block';
+                    }, 500);
+                });
+
+                conn.on('error', function(err) {
+                    console.error('Host connection error:', err);
+                    document.getElementById('host-status').textContent = 'Connection error. Try again.';
+                });
             });
 
             peer.on('error', function(err) {
@@ -1148,8 +1157,13 @@
 
             peer.on('open', function(id) {
                 console.log('Join peer ready with ID:', id);
-                // Connect to host
-                conn = peer.connect('rapid-racing-' + code);
+                // Connect to host with reliable option
+                conn = peer.connect('rapid-racing-' + code, { reliable: true });
+
+                if (!conn) {
+                    document.getElementById('join-status').textContent = 'Could not create connection.';
+                    return;
+                }
 
                 conn.on('open', function() {
                     console.log('Connected to host!');
@@ -1161,8 +1175,16 @@
 
                 conn.on('error', function(err) {
                     console.error('Connection error:', err);
-                    document.getElementById('join-status').textContent = 'Could not connect. Check the code.';
+                    document.getElementById('join-status').textContent = 'Connection failed. Try again.';
                 });
+
+                // Add timeout for connection
+                setTimeout(function() {
+                    if (conn && !conn.open) {
+                        document.getElementById('join-status').textContent = 'Connection timed out. Check the code and try again.';
+                        conn.close();
+                    }
+                }, 10000);
             });
 
             peer.on('error', function(err) {

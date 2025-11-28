@@ -3788,6 +3788,28 @@
                 carPos.y - Math.cos(car.rotation) * 8
             );
             ctx.stroke();
+
+            // Draw opponent car in multiplayer
+            if (multiplayerActive && opponentData && opponentData.x !== undefined) {
+                const oppPos = toCanvas(opponentData.x, opponentData.z);
+
+                // Opponent car dot (cyan)
+                ctx.fillStyle = '#00ffff';
+                ctx.beginPath();
+                ctx.arc(oppPos.x, oppPos.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Opponent direction indicator
+                ctx.strokeStyle = '#00ffff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(oppPos.x, oppPos.y);
+                ctx.lineTo(
+                    oppPos.x + Math.sin(opponentData.rotation) * 8,
+                    oppPos.y - Math.cos(opponentData.rotation) * 8
+                );
+                ctx.stroke();
+            }
         }
 
         function animate(currentTime) {

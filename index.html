@@ -3187,18 +3187,8 @@
         }
 
         function triggerOffTrackGameOver() {
-            if (multiplayerActive) {
-                // In multiplayer, respawn with penalty instead of game over
-                respawnWithPenalty('Landed off track!');
-                return;
-            }
-            gameOver = true;
-            gameFinished = true;
-            const message = document.getElementById('message');
-            const restartHint = isMobile ? 'Tap ↺ to try again' : 'Press SPACE to try again';
-            message.innerHTML = `WASTED!<br><span style="font-size: 24px; color: #ff6b6b;">Landed off the track!</span><br><span style="font-size: 20px;">${restartHint}</span>`;
-            message.style.display = 'block';
-            message.style.color = '#ff0000';
+            // Respawn with penalty instead of game over
+            respawnWithPenalty('Landed off track!');
         }
 
         function updateCar(delta) {
@@ -3513,18 +3503,8 @@
         }
 
         function triggerGameOver() {
-            if (multiplayerActive) {
-                // In multiplayer, respawn with penalty instead of game over
-                respawnWithPenalty('Car destroyed!');
-                return;
-            }
-            gameOver = true;
-            gameFinished = true;
-            const message = document.getElementById('message');
-            const restartHint = isMobile ? 'Tap ↺ to try again' : 'Press SPACE to try again';
-            message.innerHTML = `WASTED!<br><span style="font-size: 24px; color: #ff6b6b;">Your car is destroyed!</span><br><span style="font-size: 20px;">${restartHint}</span>`;
-            message.style.display = 'block';
-            message.style.color = '#ff0000';
+            // Respawn with penalty instead of game over
+            respawnWithPenalty('Car destroyed!');
         }
 
         function respawnWithPenalty(reason) {
@@ -3539,8 +3519,9 @@
 
             // Find a safe respawn position on the track
             // Use current progress to find nearby track point
-            const respawnIndex = Math.max(0, carTrackIndex - 5);
-            const trackPoint = trackPoints[respawnIndex];
+            const points = smoothTrackPoints.length > 0 ? smoothTrackPoints : trackWaypoints;
+            const respawnIndex = Math.max(0, Math.min(carTrackIndex - 5, points.length - 2));
+            const trackPoint = points[respawnIndex];
 
             // Reset car state
             car.position.x = trackPoint.x;
@@ -3553,8 +3534,8 @@
             car.airTilt = 0;
 
             // Calculate rotation to face track direction
-            if (respawnIndex < trackPoints.length - 1) {
-                const nextPoint = trackPoints[respawnIndex + 1];
+            if (respawnIndex < points.length - 1) {
+                const nextPoint = points[respawnIndex + 1];
                 car.rotation = Math.atan2(nextPoint.x - trackPoint.x, nextPoint.z - trackPoint.z);
             }
 

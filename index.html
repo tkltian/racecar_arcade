@@ -523,7 +523,7 @@
         const MAX_HEALTH = 100;
         const COLLISION_DAMAGE = 15;
         const GRAVITY = 0.008;
-        const JUMP_VELOCITY = 0.5;  // Doubled for bigger bounces!
+        const JUMP_VELOCITY = 0.65;  // Big bounces! (doubled + 30% more)
 
         // Game state
         let scene, camera, renderer;
@@ -1468,16 +1468,33 @@
 
             const prevX = car.position.x;
             const prevZ = car.position.z;
+            const isInAir = car.isJumping || car.position.y > 1.1;
 
-            if (isKeyPressed('ArrowUp')) {
-                car.speed += CAR_ACCELERATION;
-            }
-            if (isKeyPressed('ArrowDown')) {
-                car.speed -= CAR_BRAKE_FORCE;
+            if (isInAir) {
+                // In air: no acceleration allowed
+                // Braking at half rate, can only slow down to 0 (no reverse)
+                if (isKeyPressed('ArrowDown') && car.speed > 0) {
+                    car.speed -= CAR_BRAKE_FORCE / 2;
+                    if (car.speed < 0) car.speed = 0;
+                }
+            } else {
+                // On ground: normal controls
+                if (isKeyPressed('ArrowUp')) {
+                    car.speed += CAR_ACCELERATION;
+                }
+                if (isKeyPressed('ArrowDown')) {
+                    car.speed -= CAR_BRAKE_FORCE;
+                }
             }
 
             car.speed *= (1 - CAR_FRICTION);
-            car.speed = Math.max(-CAR_MAX_SPEED / 2, Math.min(CAR_MAX_SPEED, car.speed));
+
+            // Speed limits: full reverse only on ground, no reverse in air
+            if (isInAir) {
+                car.speed = Math.max(0, Math.min(CAR_MAX_SPEED, car.speed));
+            } else {
+                car.speed = Math.max(-CAR_MAX_SPEED / 2, Math.min(CAR_MAX_SPEED, car.speed));
+            }
 
             if (Math.abs(car.speed) > 0.01) {
                 if (isKeyPressed('ArrowLeft')) {

@@ -789,18 +789,21 @@
             rightLine.position.set(TRACK_WIDTH / 2 - 1, 0.01, -TRACK_LENGTH / 2);
             scene.add(rightLine);
 
-            const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xcc0000 });
-            const wallGeometry = new THREE.BoxGeometry(2, WALL_HEIGHT, TRACK_LENGTH);
+            // Almost transparent walls - lets scenery show through
+            const wallMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.08
+            });
+            const wallGeometry = new THREE.BoxGeometry(0.5, WALL_HEIGHT, TRACK_LENGTH);
 
             const leftWall = new THREE.Mesh(wallGeometry, wallMaterial);
-            leftWall.position.set(-TRACK_WIDTH / 2 - 1, WALL_HEIGHT / 2, -TRACK_LENGTH / 2);
-            leftWall.castShadow = true;
+            leftWall.position.set(-TRACK_WIDTH / 2 - 0.25, WALL_HEIGHT / 2, -TRACK_LENGTH / 2);
             scene.add(leftWall);
             walls.push({ mesh: leftWall, type: 'left' });
 
             const rightWall = new THREE.Mesh(wallGeometry, wallMaterial);
-            rightWall.position.set(TRACK_WIDTH / 2 + 1, WALL_HEIGHT / 2, -TRACK_LENGTH / 2);
-            rightWall.castShadow = true;
+            rightWall.position.set(TRACK_WIDTH / 2 + 0.25, WALL_HEIGHT / 2, -TRACK_LENGTH / 2);
             scene.add(rightWall);
             walls.push({ mesh: rightWall, type: 'right' });
 

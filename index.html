@@ -485,15 +485,30 @@
         };
 
         // Labubu colors based on Pop Mart "Big Into Energy" series
+        // Secret (black) is rare: 1/36 probability
+        // Other colors: 35/36 divided by 6 each
         const LABUBU_COLORS = [
-            { name: 'Love', color: 0xff6b6b, gradient: 0xff8e8e },
-            { name: 'Happiness', color: 0xffa502, gradient: 0xffc048 },
-            { name: 'Loyalty', color: 0xfd79a8, gradient: 0xfdcb6e },
-            { name: 'Serenity', color: 0x00b894, gradient: 0x55efc4 },
-            { name: 'Hope', color: 0x0984e3, gradient: 0x74b9ff },
-            { name: 'Luck', color: 0x6c5ce7, gradient: 0xa29bfe },
-            { name: 'Secret', color: 0x636e72, gradient: 0xdfe6e9 }
+            { name: 'Love', color: 0xff6b6b, gradient: 0xff8e8e, ringColor: 0xff6b6b },
+            { name: 'Happiness', color: 0xffa502, gradient: 0xffc048, ringColor: 0xffa502 },
+            { name: 'Loyalty', color: 0xfd79a8, gradient: 0xfdcb6e, ringColor: 0xfd79a8 },
+            { name: 'Serenity', color: 0x00b894, gradient: 0x55efc4, ringColor: 0x00b894 },
+            { name: 'Hope', color: 0x0984e3, gradient: 0x74b9ff, ringColor: 0x0984e3 },
+            { name: 'Luck', color: 0x6c5ce7, gradient: 0xa29bfe, ringColor: 0x6c5ce7 }
         ];
+        // Secret black Labubu - rare limited edition!
+        const LABUBU_SECRET = { name: 'Secret', color: 0x1a1a1a, gradient: 0x444444, ringColor: 0xffd700 };
+
+        function getRandomLabubuColor() {
+            const roll = Math.random() * 36;
+            if (roll < 1) {
+                // 1/36 chance for Secret black Labubu
+                return LABUBU_SECRET;
+            } else {
+                // 35/36 chance divided among 6 colors
+                const colorIndex = Math.floor(Math.random() * 6);
+                return LABUBU_COLORS[colorIndex];
+            }
+        }
 
         // Game constants
         const TRACK_WIDTH = 30;
@@ -508,7 +523,7 @@
         const MAX_HEALTH = 100;
         const COLLISION_DAMAGE = 15;
         const GRAVITY = 0.008;
-        const JUMP_VELOCITY = 0.25;
+        const JUMP_VELOCITY = 0.5;  // Doubled for bigger bounces!
 
         // Game state
         let scene, camera, renderer;
@@ -1017,8 +1032,8 @@
 
         function createLabubu(index) {
             const labubuGroup = new THREE.Group();
-            const colorIndex = index % LABUBU_COLORS.length;
-            const labubuColor = LABUBU_COLORS[colorIndex];
+            // Use probability-based color selection (1/36 for Secret black, 35/36 divided by 6 for others)
+            const labubuColor = getRandomLabubuColor();
 
             // Fuzzy/plush material for body
             const bodyMaterial = new THREE.MeshStandardMaterial({
@@ -1216,9 +1231,58 @@
             tail.position.set(0, -0.3, -1.5);
             labubuGroup.add(tail);
 
+            // Glowing boundary ring (semi-transparent barrel) to show collision area
+            const boundaryRadius = 2.5;  // Match collision radius
+            const boundaryHeight = 6;
+            const boundaryGeometry = new THREE.CylinderGeometry(boundaryRadius, boundaryRadius, boundaryHeight, 32, 1, true);
+            const boundaryMaterial = new THREE.MeshBasicMaterial({
+                color: labubuColor.ringColor,
+                transparent: true,
+                opacity: 0.25,
+                side: THREE.DoubleSide
+            });
+            const boundary = new THREE.Mesh(boundaryGeometry, boundaryMaterial);
+            boundary.position.y = boundaryHeight / 2 - 1.5;
+            labubuGroup.add(boundary);
+
+            // Add a glowing ring at the base for extra visibility
+            const baseRingGeometry = new THREE.TorusGeometry(boundaryRadius, 0.15, 8, 32);
+            const baseRingMaterial = new THREE.MeshBasicMaterial({
+                color: labubuColor.ringColor,
+                transparent: true,
+                opacity: 0.6
+            });
+            const baseRing = new THREE.Mesh(baseRingGeometry, baseRingMaterial);
+            baseRing.rotation.x = Math.PI / 2;
+            baseRing.position.y = -1.5;
+            labubuGroup.add(baseRing);
+
+            // Add a second ring at the top
+            const topRing = new THREE.Mesh(baseRingGeometry, baseRingMaterial);
+            topRing.rotation.x = Math.PI / 2;
+            topRing.position.y = boundaryHeight - 1.5;
+            labubuGroup.add(topRing);
+
+            // For Secret black Labubu, add extra golden sparkle effect
+            if (labubuColor.name === 'Secret') {
+                const sparkleRingGeometry = new THREE.TorusGeometry(boundaryRadius + 0.3, 0.1, 8, 32);
+                const sparkleMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xffd700,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                for (let i = 0; i < 3; i++) {
+                    const sparkleRing = new THREE.Mesh(sparkleRingGeometry, sparkleMaterial);
+                    sparkleRing.rotation.x = Math.PI / 2;
+                    sparkleRing.position.y = -1 + i * 2;
+                    labubuGroup.add(sparkleRing);
+                }
+            }
+
             labubuGroup.userData.yOffset = 3;
             labubuGroup.userData.isLabubu = true;
             labubuGroup.userData.colorName = labubuColor.name;
+            labubuGroup.userData.boundaryMesh = boundary;
 
             return labubuGroup;
         }

@@ -2702,6 +2702,7 @@
             const cameraOffset = new THREE.Vector3(0, 1.5, 0.5);
             cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation);
             camera.position.copy(car.position).add(cameraOffset);
+            camera.rotation.x = car.mesh.rotation.x;  // Tilt camera with car so view isn't blocked
             camera.rotation.y = car.rotation;
 
             // Check if reached finish line
@@ -2919,6 +2920,7 @@
             car.mesh.rotation.x = 0;
             car.mesh.rotation.y = car.rotation;
             camera.position.set(0, 2.5, 0.5);
+            camera.rotation.x = 0;
             camera.rotation.y = 0;
 
             obstacles.forEach(obstacle => {

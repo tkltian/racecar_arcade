@@ -3546,10 +3546,15 @@
             car.airTilt = 0;
 
             // Calculate rotation to face track direction (forward along track flow)
-            if (respawnIndex < points.length - 1) {
-                const nextPoint = points[respawnIndex + 1];
-                car.rotation = Math.atan2(nextPoint.x - trackPoint.x, -(nextPoint.z - trackPoint.z));
-            }
+            // Use points before and after to get true track tangent direction
+            const prevIdx = Math.max(0, respawnIndex - 3);
+            const nextIdx = Math.min(points.length - 1, respawnIndex + 3);
+            const prevPoint = points[prevIdx];
+            const nextPoint = points[nextIdx];
+            // Direction vector from earlier point to later point = track flow direction
+            const dx = nextPoint.x - prevPoint.x;
+            const dz = nextPoint.z - prevPoint.z;
+            car.rotation = Math.atan2(dx, -dz);
 
             // Reset health
             health = MAX_HEALTH;

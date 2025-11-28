@@ -858,8 +858,8 @@
                 });
 
                 const ramp = new THREE.Mesh(rampGeometry, rampMaterial);
-                ramp.rotation.y = Math.PI / 2;
-                ramp.position.set(rampX + rampWidth / 2, 0, rampZ);
+                ramp.rotation.y = -Math.PI / 2;  // Rotate to face -Z direction (toward finish line)
+                ramp.position.set(rampX - rampWidth / 2, 0, rampZ);
                 ramp.castShadow = true;
                 ramp.receiveShadow = true;
                 scene.add(ramp);

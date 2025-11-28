@@ -2,58 +2,270 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Owen's Racing Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rapid Racing</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
         body {
             overflow: hidden;
             font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            touch-action: none;
         }
         #game-container {
             width: 100vw;
             height: 100vh;
+            display: none;
         }
+
+        /* Home Page Styles */
+        #home-page {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: white;
+            padding: 20px;
+        }
+        #home-page h1 {
+            font-size: clamp(36px, 10vw, 72px);
+            text-shadow: 4px 4px 8px rgba(0,0,0,0.5), 0 0 40px rgba(255,200,0,0.3);
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+        }
+        #home-page .subtitle {
+            font-size: clamp(14px, 4vw, 24px);
+            color: #aaa;
+            margin-bottom: 40px;
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.5;
+        }
+        .menu-buttons {
+            display: flex;
+            gap: 20px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .menu-btn {
+            padding: 15px 40px;
+            font-size: clamp(16px, 4vw, 24px);
+            font-weight: bold;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+        .play-btn {
+            background: linear-gradient(45deg, #00b894, #00cec9);
+            color: white;
+            box-shadow: 0 8px 20px rgba(0,184,148,0.4);
+        }
+        .play-btn:hover, .play-btn:active {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0,184,148,0.6);
+        }
+        .settings-btn {
+            background: linear-gradient(45deg, #6c5ce7, #a29bfe);
+            color: white;
+            box-shadow: 0 8px 20px rgba(108,92,231,0.4);
+        }
+        .settings-btn:hover, .settings-btn:active {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(108,92,231,0.6);
+        }
+
+        /* Settings Panel */
+        #settings-panel {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 30, 50, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            z-index: 200;
+            width: 90%;
+            max-width: 450px;
+            max-height: 80vh;
+            overflow-y: auto;
+            color: white;
+        }
+        #settings-panel h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: clamp(24px, 5vw, 32px);
+            color: #feca57;
+        }
+        .setting-group {
+            margin-bottom: 20px;
+        }
+        .setting-group label {
+            display: block;
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #ddd;
+        }
+        .setting-options {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .setting-option {
+            padding: 10px 15px;
+            background: #2d2d44;
+            border: 2px solid #444;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+            font-size: 13px;
+            flex: 1;
+            min-width: 80px;
+            text-align: center;
+        }
+        .setting-option:hover, .setting-option:active {
+            border-color: #6c5ce7;
+        }
+        .setting-option.selected {
+            background: #6c5ce7;
+            border-color: #a29bfe;
+        }
+        .obstacle-preview {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .obstacle-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+        }
+        .close-settings {
+            margin-top: 25px;
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .close-settings:hover, .close-settings:active {
+            transform: scale(1.02);
+        }
+        #settings-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 199;
+        }
+
+        /* Game UI */
         #ui {
             position: absolute;
-            top: 20px;
-            left: 20px;
+            top: 10px;
+            left: 10px;
             color: white;
-            font-size: 24px;
+            font-size: clamp(16px, 4vw, 24px);
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
             z-index: 100;
+            display: none;
         }
         #speedometer {
-            font-size: 36px;
+            font-size: clamp(24px, 6vw, 36px);
             font-weight: bold;
         }
         #timer {
-            margin-top: 10px;
+            margin-top: 5px;
         }
+
+        /* Health Bar */
+        #health-container {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            max-width: 40vw;
+            z-index: 100;
+            display: none;
+        }
+        #health-label {
+            color: white;
+            font-size: 14px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        #health-bar-bg {
+            width: 100%;
+            height: 20px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 10px;
+            border: 2px solid white;
+            overflow: hidden;
+        }
+        #health-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #00b894, #55efc4);
+            transition: width 0.3s, background 0.3s;
+            border-radius: 8px;
+        }
+        #health-bar.medium {
+            background: linear-gradient(90deg, #fdcb6e, #ffeaa7);
+        }
+        #health-bar.low {
+            background: linear-gradient(90deg, #d63031, #ff7675);
+        }
+
         #message {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 48px;
+            font-size: clamp(32px, 8vw, 48px);
             font-weight: bold;
             color: #ffff00;
             text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
             z-index: 100;
             display: none;
+            text-align: center;
+            padding: 20px;
         }
         #instructions {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
+            bottom: 10px;
+            left: 10px;
             color: white;
-            font-size: 16px;
+            font-size: clamp(10px, 2.5vw, 16px);
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
             z-index: 100;
+            display: none;
         }
         #collision-flash {
             position: absolute;
@@ -67,27 +279,225 @@
             opacity: 0;
             transition: opacity 0.1s;
         }
+        #back-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 15px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            z-index: 100;
+            display: none;
+            transition: all 0.3s;
+        }
+        #back-btn:hover, #back-btn:active {
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* Mobile Touch Controls */
+        #touch-controls {
+            display: none;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 180px;
+            z-index: 100;
+            pointer-events: none;
+        }
+        .touch-btn {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            border: 3px solid rgba(255,255,255,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            color: white;
+            pointer-events: auto;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: background 0.1s;
+        }
+        .touch-btn:active, .touch-btn.active {
+            background: rgba(255,255,255,0.6);
+        }
+        #touch-left {
+            left: 20px;
+            bottom: 60px;
+        }
+        #touch-right {
+            left: 110px;
+            bottom: 60px;
+        }
+        #touch-accel {
+            right: 20px;
+            bottom: 100px;
+            background: rgba(0,255,0,0.3);
+            border-color: rgba(0,255,0,0.6);
+        }
+        #touch-accel:active, #touch-accel.active {
+            background: rgba(0,255,0,0.6);
+        }
+        #touch-brake {
+            right: 20px;
+            bottom: 20px;
+            background: rgba(255,0,0,0.3);
+            border-color: rgba(255,0,0,0.6);
+        }
+        #touch-brake:active, #touch-brake.active {
+            background: rgba(255,0,0,0.6);
+        }
+        #touch-restart {
+            right: 110px;
+            bottom: 60px;
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            background: rgba(255,255,0,0.3);
+            border-color: rgba(255,255,0,0.6);
+        }
+
+        @media (max-width: 768px) {
+            #touch-controls {
+                display: block;
+            }
+            #instructions {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Home Page -->
+    <div id="home-page">
+        <h1>Rapid Racing</h1>
+        <p class="subtitle">
+            Race through an exciting 3D track from the driver's seat!<br>
+            Dodge obstacles, hit ramps to jump, and reach the finish line!
+        </p>
+        <div class="menu-buttons">
+            <button class="menu-btn play-btn" onclick="startGame()">Play</button>
+            <button class="menu-btn settings-btn" onclick="openSettings()">Settings</button>
+        </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settings-overlay" onclick="closeSettings()"></div>
+    <div id="settings-panel">
+        <h2>Game Settings</h2>
+
+        <div class="setting-group">
+            <label>Track Length</label>
+            <div class="setting-options">
+                <div class="setting-option" data-setting="trackLength" data-value="short">Short</div>
+                <div class="setting-option selected" data-setting="trackLength" data-value="medium">Medium</div>
+                <div class="setting-option" data-setting="trackLength" data-value="long">Long</div>
+            </div>
+        </div>
+
+        <div class="setting-group">
+            <label>Difficulty</label>
+            <div class="setting-options">
+                <div class="setting-option" data-setting="difficulty" data-value="easy">Easy</div>
+                <div class="setting-option selected" data-setting="difficulty" data-value="medium">Medium</div>
+                <div class="setting-option" data-setting="difficulty" data-value="hard">Hard</div>
+            </div>
+        </div>
+
+        <div class="setting-group">
+            <label>Obstacle Type</label>
+            <div class="setting-options">
+                <div class="setting-option selected" data-setting="obstacleType" data-value="cones">
+                    <div class="obstacle-preview">
+                        <div class="obstacle-icon" style="background: linear-gradient(#ff6600, #ffff00);"></div>
+                        Cones
+                    </div>
+                </div>
+                <div class="setting-option" data-setting="obstacleType" data-value="crates">
+                    <div class="obstacle-preview">
+                        <div class="obstacle-icon" style="background: #8B4513; border-radius: 3px;"></div>
+                        Crates
+                    </div>
+                </div>
+                <div class="setting-option" data-setting="obstacleType" data-value="labubu">
+                    <div class="obstacle-preview">
+                        <div class="obstacle-icon" style="background: linear-gradient(45deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);"></div>
+                        Labubu
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button class="close-settings" onclick="closeSettings()">Save & Close</button>
+    </div>
+
+    <!-- Game Container -->
     <div id="game-container"></div>
     <div id="ui">
         <div id="speedometer">0 MPH</div>
         <div id="timer">Time: 0.00s</div>
         <div id="lap">Progress: 0%</div>
     </div>
+    <div id="health-container">
+        <div id="health-label">HEALTH</div>
+        <div id="health-bar-bg">
+            <div id="health-bar"></div>
+        </div>
+    </div>
     <div id="message"></div>
     <div id="instructions">
         Arrow Keys: UP = Accelerate | DOWN = Brake | LEFT/RIGHT = Steer<br>
-        Press SPACE to restart
+        Press SPACE to restart | ESC for menu
     </div>
+    <button id="back-btn" onclick="goToMenu()">Menu</button>
     <div id="collision-flash"></div>
+
+    <!-- Mobile Touch Controls -->
+    <div id="touch-controls">
+        <div class="touch-btn" id="touch-left">◀</div>
+        <div class="touch-btn" id="touch-right">▶</div>
+        <div class="touch-btn" id="touch-accel">▲</div>
+        <div class="touch-btn" id="touch-brake">▼</div>
+        <div class="touch-btn" id="touch-restart">↻</div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
+        // Game Settings
+        let gameSettings = {
+            trackLength: 'medium',
+            difficulty: 'medium',
+            obstacleType: 'cones'
+        };
+
+        const TRACK_LENGTHS = {
+            short: 400,
+            medium: 800,
+            long: 1200
+        };
+
+        // Labubu colors based on Pop Mart "Big Into Energy" series
+        const LABUBU_COLORS = [
+            { name: 'Love', color: 0xff6b6b, gradient: 0xff8e8e },
+            { name: 'Happiness', color: 0xffa502, gradient: 0xffc048 },
+            { name: 'Loyalty', color: 0xfd79a8, gradient: 0xfdcb6e },
+            { name: 'Serenity', color: 0x00b894, gradient: 0x55efc4 },
+            { name: 'Hope', color: 0x0984e3, gradient: 0x74b9ff },
+            { name: 'Luck', color: 0x6c5ce7, gradient: 0xa29bfe },
+            { name: 'Secret', color: 0x636e72, gradient: 0xdfe6e9 }
+        ];
+
         // Game constants
         const TRACK_WIDTH = 30;
-        const TRACK_LENGTH = 800;
+        let TRACK_LENGTH = 800;
         const WALL_HEIGHT = 5;
         const CAR_MAX_SPEED = 2;
         const CAR_ACCELERATION = 0.02;
@@ -95,40 +505,182 @@
         const CAR_FRICTION = 0.005;
         const CAR_TURN_SPEED = 0.03;
         const COLLISION_SLOWDOWN = 0.3;
+        const MAX_HEALTH = 100;
+        const COLLISION_DAMAGE = 15;
+        const GRAVITY = 0.008;
+        const JUMP_VELOCITY = 0.15;
 
         // Game state
         let scene, camera, renderer;
         let car = {
             speed: 0,
-            position: new THREE.Vector3(0, 1, 0),
+            position: null,
             rotation: 0,
-            mesh: null
+            mesh: null,
+            velocityY: 0,
+            isJumping: false
         };
         let keys = {};
+        let touchKeys = {};
         let obstacles = [];
+        let ramps = [];
         let walls = [];
         let gameTime = 0;
         let gameStarted = false;
         let gameFinished = false;
+        let gameOver = false;
         let lastCollisionTime = 0;
+        let gameInitialized = false;
+        let animationId = null;
+        let health = MAX_HEALTH;
 
-        // Initialize the game
+        // Detect mobile
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+
+        // Settings UI handlers
+        document.querySelectorAll('.setting-option').forEach(option => {
+            option.addEventListener('click', () => {
+                const setting = option.dataset.setting;
+                const value = option.dataset.value;
+                document.querySelectorAll(`[data-setting="${setting}"]`).forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                option.classList.add('selected');
+                gameSettings[setting] = value;
+            });
+        });
+
+        // Touch controls setup
+        function setupTouchControls() {
+            const touchButtons = {
+                'touch-left': 'ArrowLeft',
+                'touch-right': 'ArrowRight',
+                'touch-accel': 'ArrowUp',
+                'touch-brake': 'ArrowDown'
+            };
+
+            Object.entries(touchButtons).forEach(([id, key]) => {
+                const btn = document.getElementById(id);
+
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    touchKeys[key] = true;
+                    btn.classList.add('active');
+                    if (!gameStarted && !gameOver) {
+                        gameStarted = true;
+                        document.getElementById('message').style.display = 'none';
+                    }
+                });
+
+                btn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    touchKeys[key] = false;
+                    btn.classList.remove('active');
+                });
+
+                btn.addEventListener('touchcancel', (e) => {
+                    touchKeys[key] = false;
+                    btn.classList.remove('active');
+                });
+            });
+
+            // Restart button
+            document.getElementById('touch-restart').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                restartGame();
+            });
+        }
+
+        function openSettings() {
+            document.getElementById('settings-panel').style.display = 'block';
+            document.getElementById('settings-overlay').style.display = 'block';
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-panel').style.display = 'none';
+            document.getElementById('settings-overlay').style.display = 'none';
+        }
+
+        function startGame() {
+            document.getElementById('home-page').style.display = 'none';
+            document.getElementById('game-container').style.display = 'block';
+            document.getElementById('ui').style.display = 'block';
+            document.getElementById('health-container').style.display = 'block';
+            document.getElementById('instructions').style.display = 'block';
+            document.getElementById('back-btn').style.display = 'block';
+            if (isMobile) {
+                document.getElementById('touch-controls').style.display = 'block';
+            }
+
+            TRACK_LENGTH = TRACK_LENGTHS[gameSettings.trackLength];
+
+            if (gameInitialized) {
+                cleanupGame();
+            }
+            init();
+        }
+
+        function goToMenu() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            document.getElementById('game-container').style.display = 'none';
+            document.getElementById('ui').style.display = 'none';
+            document.getElementById('health-container').style.display = 'none';
+            document.getElementById('instructions').style.display = 'none';
+            document.getElementById('back-btn').style.display = 'none';
+            document.getElementById('message').style.display = 'none';
+            document.getElementById('touch-controls').style.display = 'none';
+            document.getElementById('home-page').style.display = 'flex';
+        }
+
+        function cleanupGame() {
+            const container = document.getElementById('game-container');
+            while (container.firstChild) {
+                container.removeChild(container.firstChild);
+            }
+            obstacles = [];
+            ramps = [];
+            walls = [];
+            if (scene) {
+                scene.traverse((object) => {
+                    if (object.geometry) object.geometry.dispose();
+                    if (object.material) {
+                        if (Array.isArray(object.material)) {
+                            object.material.forEach(m => m.dispose());
+                        } else {
+                            object.material.dispose();
+                        }
+                    }
+                });
+            }
+            if (renderer) {
+                renderer.dispose();
+            }
+        }
+
         function init() {
-            // Scene
+            gameInitialized = true;
+            health = MAX_HEALTH;
+            updateHealthBar();
+
+            car.position = new THREE.Vector3(0, 1, 0);
+            car.rotation = 0;
+            car.speed = 0;
+            car.velocityY = 0;
+            car.isJumping = false;
+
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87CEEB); // Sky blue
+            scene.background = new THREE.Color(0x87CEEB);
             scene.fog = new THREE.Fog(0x87CEEB, 100, 500);
 
-            // Camera (first person view)
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-            // Renderer
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
             document.getElementById('game-container').appendChild(renderer.domElement);
 
-            // Lighting
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
             scene.add(ambientLight);
 
@@ -139,54 +691,68 @@
             directionalLight.shadow.mapSize.height = 2048;
             scene.add(directionalLight);
 
-            // Create game elements
             createTrack();
             createCar();
+            createRamps();
             createObstacles();
             createFinishLine();
             createScenery();
 
-            // Event listeners
-            window.addEventListener('keydown', (e) => {
-                // Prevent default browser behavior for game keys (stops Space from scrolling, arrows from scrolling)
-                if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
-                    e.preventDefault();
-                }
-
-                keys[e.code] = true;
-                // Space restarts the game anytime
-                if (e.code === 'Space') {
-                    restartGame();
-                }
-                if (!gameStarted && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
-                    gameStarted = true;
-                }
-            });
-            window.addEventListener('keyup', (e) => keys[e.code] = false);
+            window.addEventListener('keydown', handleKeyDown);
+            window.addEventListener('keyup', handleKeyUp);
             window.addEventListener('resize', onWindowResize);
+            setupTouchControls();
 
-            // Start game loop
-            animate();
+            const message = document.getElementById('message');
+            message.innerHTML = isMobile ? 'READY!<br>Touch controls to Start' : 'READY!<br>Press Arrow Keys to Start';
+            message.style.display = 'block';
+            message.style.color = '#ffff00';
+
+            gameTime = 0;
+            gameStarted = false;
+            gameFinished = false;
+            gameOver = false;
+
+            lastTime = 0;
+            animate(0);
+        }
+
+        function handleKeyDown(e) {
+            if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape'].includes(e.code)) {
+                e.preventDefault();
+            }
+            keys[e.code] = true;
+            if (e.code === 'Escape') {
+                goToMenu();
+                return;
+            }
+            if (e.code === 'Space') {
+                restartGame();
+            }
+            if (!gameStarted && !gameOver && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+                gameStarted = true;
+                document.getElementById('message').style.display = 'none';
+            }
+        }
+
+        function handleKeyUp(e) {
+            keys[e.code] = false;
+        }
+
+        function isKeyPressed(key) {
+            return keys[key] || touchKeys[key];
         }
 
         function createTrack() {
-            // Ground/track
             const trackGeometry = new THREE.PlaneGeometry(TRACK_WIDTH, TRACK_LENGTH);
-            const trackMaterial = new THREE.MeshStandardMaterial({
-                color: 0x333333,
-                roughness: 0.8
-            });
+            const trackMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
             const track = new THREE.Mesh(trackGeometry, trackMaterial);
             track.rotation.x = -Math.PI / 2;
             track.position.z = -TRACK_LENGTH / 2;
             track.receiveShadow = true;
             scene.add(track);
 
-            // Track lines
-            const lineGeometry = new THREE.PlaneGeometry(0.5, TRACK_LENGTH);
             const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-
-            // Center dashed line
             for (let i = 0; i < TRACK_LENGTH / 20; i++) {
                 const dashGeometry = new THREE.PlaneGeometry(0.3, 8);
                 const dash = new THREE.Mesh(dashGeometry, lineMaterial);
@@ -195,7 +761,7 @@
                 scene.add(dash);
             }
 
-            // Side lines
+            const lineGeometry = new THREE.PlaneGeometry(0.5, TRACK_LENGTH);
             const leftLine = new THREE.Mesh(lineGeometry, lineMaterial);
             leftLine.rotation.x = -Math.PI / 2;
             leftLine.position.set(-TRACK_WIDTH / 2 + 1, 0.01, -TRACK_LENGTH / 2);
@@ -206,25 +772,21 @@
             rightLine.position.set(TRACK_WIDTH / 2 - 1, 0.01, -TRACK_LENGTH / 2);
             scene.add(rightLine);
 
-            // Walls
             const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xcc0000 });
+            const wallGeometry = new THREE.BoxGeometry(2, WALL_HEIGHT, TRACK_LENGTH);
 
-            // Left wall
-            const leftWallGeometry = new THREE.BoxGeometry(2, WALL_HEIGHT, TRACK_LENGTH);
-            const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
+            const leftWall = new THREE.Mesh(wallGeometry, wallMaterial);
             leftWall.position.set(-TRACK_WIDTH / 2 - 1, WALL_HEIGHT / 2, -TRACK_LENGTH / 2);
             leftWall.castShadow = true;
             scene.add(leftWall);
             walls.push({ mesh: leftWall, type: 'left' });
 
-            // Right wall
-            const rightWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
+            const rightWall = new THREE.Mesh(wallGeometry, wallMaterial);
             rightWall.position.set(TRACK_WIDTH / 2 + 1, WALL_HEIGHT / 2, -TRACK_LENGTH / 2);
             rightWall.castShadow = true;
             scene.add(rightWall);
             walls.push({ mesh: rightWall, type: 'right' });
 
-            // Grass on sides
             const grassMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22 });
             const grassGeometry = new THREE.PlaneGeometry(100, TRACK_LENGTH);
 
@@ -240,25 +802,18 @@
         }
 
         function createCar() {
-            // Simple car body (invisible in first person, but used for collision)
             const carGeometry = new THREE.BoxGeometry(3, 1.5, 5);
-            const carMaterial = new THREE.MeshStandardMaterial({
-                color: 0x0066ff,
-                transparent: true,
-                opacity: 0
-            });
+            const carMaterial = new THREE.MeshStandardMaterial({ color: 0x0066ff, transparent: true, opacity: 0 });
             car.mesh = new THREE.Mesh(carGeometry, carMaterial);
             car.mesh.position.copy(car.position);
             scene.add(car.mesh);
 
-            // Dashboard (visible in first person view)
             const dashboardGeometry = new THREE.BoxGeometry(3, 0.5, 1.5);
             const dashboardMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
             const dashboard = new THREE.Mesh(dashboardGeometry, dashboardMaterial);
             dashboard.position.set(0, -0.3, -1);
             car.mesh.add(dashboard);
 
-            // Steering wheel
             const wheelGeometry = new THREE.TorusGeometry(0.3, 0.05, 8, 16);
             const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x111111 });
             const steeringWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
@@ -266,7 +821,6 @@
             steeringWheel.rotation.x = Math.PI / 4;
             car.mesh.add(steeringWheel);
 
-            // Hood (visible part of car from driver view)
             const hoodGeometry = new THREE.BoxGeometry(2.5, 0.3, 2);
             const hoodMaterial = new THREE.MeshStandardMaterial({ color: 0x0066ff });
             const hood = new THREE.Mesh(hoodGeometry, hoodMaterial);
@@ -274,67 +828,244 @@
             car.mesh.add(hood);
         }
 
+        function createRamps() {
+            // Create ramps at strategic positions
+            const rampCount = Math.floor(TRACK_LENGTH / 200);
+
+            for (let i = 0; i < rampCount; i++) {
+                const rampX = (Math.random() - 0.5) * (TRACK_WIDTH - 10);
+                const rampZ = -100 - (i * 200) + (Math.random() * 50);
+
+                // Ramp geometry (wedge shape)
+                const rampLength = 8;
+                const rampWidth = 6;
+                const rampHeight = 1.5;
+
+                const rampShape = new THREE.Shape();
+                rampShape.moveTo(0, 0);
+                rampShape.lineTo(rampLength, 0);
+                rampShape.lineTo(rampLength, 0);
+                rampShape.lineTo(0, rampHeight);
+                rampShape.lineTo(0, 0);
+
+                const extrudeSettings = { depth: rampWidth, bevelEnabled: false };
+                const rampGeometry = new THREE.ExtrudeGeometry(rampShape, extrudeSettings);
+
+                const rampMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xf39c12,
+                    roughness: 0.6
+                });
+
+                const ramp = new THREE.Mesh(rampGeometry, rampMaterial);
+                ramp.rotation.y = Math.PI;
+                ramp.position.set(rampX + rampWidth / 2, 0, rampZ);
+                ramp.castShadow = true;
+                ramp.receiveShadow = true;
+                scene.add(ramp);
+
+                // Arrow indicators on ramp
+                const arrowGeometry = new THREE.PlaneGeometry(2, 3);
+                const arrowCanvas = document.createElement('canvas');
+                arrowCanvas.width = 64;
+                arrowCanvas.height = 96;
+                const ctx = arrowCanvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.moveTo(32, 10);
+                ctx.lineTo(54, 50);
+                ctx.lineTo(42, 50);
+                ctx.lineTo(42, 86);
+                ctx.lineTo(22, 86);
+                ctx.lineTo(22, 50);
+                ctx.lineTo(10, 50);
+                ctx.closePath();
+                ctx.fill();
+
+                const arrowTexture = new THREE.CanvasTexture(arrowCanvas);
+                const arrowMaterial = new THREE.MeshBasicMaterial({ map: arrowTexture, transparent: true });
+                const arrow = new THREE.Mesh(arrowGeometry, arrowMaterial);
+                arrow.rotation.x = -Math.PI / 2 + 0.2;
+                arrow.position.set(rampX, 0.8, rampZ - 2);
+                scene.add(arrow);
+
+                ramps.push({
+                    x: rampX,
+                    z: rampZ,
+                    width: rampWidth,
+                    length: rampLength,
+                    height: rampHeight
+                });
+            }
+        }
+
         function createObstacles() {
-            const obstaclePositions = [
-                { x: 5, z: -50 },
-                { x: -8, z: -100 },
-                { x: 0, z: -150 },
-                { x: 10, z: -200 },
-                { x: -6, z: -250 },
-                { x: 3, z: -300 },
-                { x: -10, z: -350 },
-                { x: 7, z: -400 },
-                { x: -3, z: -450 },
-                { x: 8, z: -500 },
-                { x: -8, z: -550 },
-                { x: 0, z: -600 },
-                { x: 5, z: -650 },
-                { x: -5, z: -700 },
-                { x: 2, z: -720 },
-            ];
+            const obstacleCount = Math.floor(TRACK_LENGTH / 50);
+            const obstaclePositions = [];
 
-            const colors = [0xff6600, 0xffff00, 0x00ff00, 0xff00ff];
-
-            obstaclePositions.forEach((pos, index) => {
-                // Barrier/cone obstacle
-                const obstacleGeometry = new THREE.CylinderGeometry(0.5, 1.5, 3, 8);
-                const obstacleMaterial = new THREE.MeshStandardMaterial({
-                    color: colors[index % colors.length]
+            for (let i = 0; i < obstacleCount; i++) {
+                obstaclePositions.push({
+                    x: (Math.random() - 0.5) * (TRACK_WIDTH - 6),
+                    z: -50 - (i * (TRACK_LENGTH - 100) / obstacleCount)
                 });
-                const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
-                obstacle.position.set(pos.x, 1.5, pos.z);
-                obstacle.castShadow = true;
-                scene.add(obstacle);
-                obstacles.push({
-                    mesh: obstacle,
-                    radius: 2
-                });
+            }
 
-                // Some obstacles are boxes (crates)
-                if (index % 3 === 0) {
-                    const crateGeometry = new THREE.BoxGeometry(3, 3, 3);
-                    const crateMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
-                    const crate = new THREE.Mesh(crateGeometry, crateMaterial);
-                    crate.position.set(pos.x + (Math.random() - 0.5) * 10, 1.5, pos.z - 25);
-                    crate.castShadow = true;
-                    scene.add(crate);
-                    obstacles.push({
-                        mesh: crate,
-                        radius: 2.5
-                    });
+            const difficultyMultiplier = { easy: 0.6, medium: 1, hard: 1.5 };
+            const actualCount = Math.floor(obstaclePositions.length * difficultyMultiplier[gameSettings.difficulty]);
+
+            obstaclePositions.slice(0, actualCount).forEach((pos, index) => {
+                // Check if position is on a ramp
+                let onRamp = false;
+                for (const ramp of ramps) {
+                    if (Math.abs(pos.x - ramp.x) < ramp.width / 2 + 3 &&
+                        pos.z > ramp.z - ramp.length - 5 && pos.z < ramp.z + 5) {
+                        onRamp = true;
+                        break;
+                    }
                 }
+                if (onRamp) return;
+
+                let obstacleMesh;
+                let radius;
+
+                if (gameSettings.obstacleType === 'cones') {
+                    obstacleMesh = createCone(index);
+                    radius = 2;
+                } else if (gameSettings.obstacleType === 'crates') {
+                    obstacleMesh = createCrate();
+                    radius = 2.5;
+                } else if (gameSettings.obstacleType === 'labubu') {
+                    obstacleMesh = createLabubu(index);
+                    radius = 2.5;
+                }
+
+                obstacleMesh.position.set(pos.x, obstacleMesh.userData.yOffset || 1.5, pos.z);
+                obstacleMesh.castShadow = true;
+                scene.add(obstacleMesh);
+
+                const isMoving = gameSettings.difficulty === 'hard' && Math.random() > 0.5;
+
+                obstacles.push({
+                    mesh: obstacleMesh,
+                    radius: radius,
+                    isMoving: isMoving,
+                    moveSpeed: 0.02 + Math.random() * 0.03,
+                    moveDirection: Math.random() > 0.5 ? 1 : -1,
+                    originalX: pos.x,
+                    moveRange: 5 + Math.random() * 5
+                });
             });
         }
 
+        function createCone(index) {
+            const colors = [0xff6600, 0xffff00, 0x00ff00, 0xff00ff];
+            const coneGeometry = new THREE.CylinderGeometry(0.5, 1.5, 3, 8);
+            const coneMaterial = new THREE.MeshStandardMaterial({ color: colors[index % colors.length] });
+            const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+            cone.userData.yOffset = 1.5;
+            return cone;
+        }
+
+        function createCrate() {
+            const crateGeometry = new THREE.BoxGeometry(3, 3, 3);
+            const crateMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+            const crate = new THREE.Mesh(crateGeometry, crateMaterial);
+            crate.userData.yOffset = 1.5;
+            return crate;
+        }
+
+        function createLabubu(index) {
+            const labubuGroup = new THREE.Group();
+            const colorIndex = index % LABUBU_COLORS.length;
+            const labubuColor = LABUBU_COLORS[colorIndex];
+
+            const bodyGeometry = new THREE.SphereGeometry(1.5, 16, 16);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ color: labubuColor.color, roughness: 0.8 });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.scale.y = 1.2;
+            labubuGroup.add(body);
+
+            const headGeometry = new THREE.SphereGeometry(1.2, 16, 16);
+            const head = new THREE.Mesh(headGeometry, bodyMaterial);
+            head.position.y = 1.8;
+            labubuGroup.add(head);
+
+            const earGeometry = new THREE.ConeGeometry(0.4, 1.2, 8);
+            const earMaterial = new THREE.MeshStandardMaterial({ color: labubuColor.gradient });
+
+            const leftEar = new THREE.Mesh(earGeometry, earMaterial);
+            leftEar.position.set(-0.7, 2.8, 0);
+            leftEar.rotation.z = 0.3;
+            labubuGroup.add(leftEar);
+
+            const rightEar = new THREE.Mesh(earGeometry, earMaterial);
+            rightEar.position.set(0.7, 2.8, 0);
+            rightEar.rotation.z = -0.3;
+            labubuGroup.add(rightEar);
+
+            const eyeGeometry = new THREE.SphereGeometry(0.25, 8, 8);
+            const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+            leftEye.position.set(-0.4, 2, 1);
+            labubuGroup.add(leftEye);
+            const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+            rightEye.position.set(0.4, 2, 1);
+            labubuGroup.add(rightEye);
+
+            const sparkleGeometry = new THREE.SphereGeometry(0.08, 8, 8);
+            const sparkleMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const leftSparkle = new THREE.Mesh(sparkleGeometry, sparkleMaterial);
+            leftSparkle.position.set(-0.35, 2.1, 1.2);
+            labubuGroup.add(leftSparkle);
+            const rightSparkle = new THREE.Mesh(sparkleGeometry, sparkleMaterial);
+            rightSparkle.position.set(0.45, 2.1, 1.2);
+            labubuGroup.add(rightSparkle);
+
+            const mouthGeometry = new THREE.BoxGeometry(0.6, 0.2, 0.1);
+            const mouthMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 });
+            const mouth = new THREE.Mesh(mouthGeometry, mouthMaterial);
+            mouth.position.set(0, 1.5, 1.15);
+            labubuGroup.add(mouth);
+
+            const toothGeometry = new THREE.BoxGeometry(0.15, 0.25, 0.1);
+            const toothMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const leftTooth = new THREE.Mesh(toothGeometry, toothMaterial);
+            leftTooth.position.set(-0.12, 1.35, 1.15);
+            labubuGroup.add(leftTooth);
+            const rightTooth = new THREE.Mesh(toothGeometry, toothMaterial);
+            rightTooth.position.set(0.12, 1.35, 1.15);
+            labubuGroup.add(rightTooth);
+
+            const armGeometry = new THREE.CapsuleGeometry(0.3, 0.8, 4, 8);
+            const armMaterial = new THREE.MeshStandardMaterial({ color: labubuColor.color });
+            const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+            leftArm.position.set(-1.5, 0.5, 0);
+            leftArm.rotation.z = 0.5;
+            labubuGroup.add(leftArm);
+            const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+            rightArm.position.set(1.5, 0.5, 0);
+            rightArm.rotation.z = -0.5;
+            labubuGroup.add(rightArm);
+
+            const footGeometry = new THREE.SphereGeometry(0.5, 8, 8);
+            footGeometry.scale(1, 0.6, 1.3);
+            const leftFoot = new THREE.Mesh(footGeometry, armMaterial);
+            leftFoot.position.set(-0.6, -1.3, 0.3);
+            labubuGroup.add(leftFoot);
+            const rightFoot = new THREE.Mesh(footGeometry, armMaterial);
+            rightFoot.position.set(0.6, -1.3, 0.3);
+            labubuGroup.add(rightFoot);
+
+            labubuGroup.userData.yOffset = 2.5;
+            labubuGroup.userData.isLabubu = true;
+            return labubuGroup;
+        }
+
         function createFinishLine() {
-            // Finish line on ground
             const finishGeometry = new THREE.PlaneGeometry(TRACK_WIDTH, 5);
             const canvas = document.createElement('canvas');
             canvas.width = 256;
             canvas.height = 64;
             const ctx = canvas.getContext('2d');
-
-            // Checkered pattern
             const squareSize = 32;
             for (let x = 0; x < canvas.width; x += squareSize) {
                 for (let y = 0; y < canvas.height; y += squareSize) {
@@ -342,40 +1073,33 @@
                     ctx.fillRect(x, y, squareSize, squareSize);
                 }
             }
-
             const finishTexture = new THREE.CanvasTexture(canvas);
             finishTexture.wrapS = THREE.RepeatWrapping;
             finishTexture.wrapT = THREE.RepeatWrapping;
             finishTexture.repeat.set(4, 1);
-
             const finishMaterial = new THREE.MeshBasicMaterial({ map: finishTexture });
             const finishLine = new THREE.Mesh(finishGeometry, finishMaterial);
             finishLine.rotation.x = -Math.PI / 2;
             finishLine.position.set(0, 0.02, -TRACK_LENGTH + 20);
             scene.add(finishLine);
 
-            // Finish banner
             const bannerGeometry = new THREE.BoxGeometry(TRACK_WIDTH + 4, 2, 0.5);
             const bannerMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
             const banner = new THREE.Mesh(bannerGeometry, bannerMaterial);
             banner.position.set(0, 8, -TRACK_LENGTH + 20);
             scene.add(banner);
 
-            // Banner supports
             const supportGeometry = new THREE.CylinderGeometry(0.3, 0.3, 10, 8);
             const supportMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
-
             const leftSupport = new THREE.Mesh(supportGeometry, supportMaterial);
             leftSupport.position.set(-TRACK_WIDTH / 2 - 1, 5, -TRACK_LENGTH + 20);
             scene.add(leftSupport);
-
             const rightSupport = new THREE.Mesh(supportGeometry, supportMaterial);
             rightSupport.position.set(TRACK_WIDTH / 2 + 1, 5, -TRACK_LENGTH + 20);
             scene.add(rightSupport);
         }
 
         function createScenery() {
-            // Trees along the track
             const treePositions = [];
             for (let z = -50; z > -TRACK_LENGTH; z -= 40) {
                 treePositions.push({ x: -TRACK_WIDTH / 2 - 20, z: z });
@@ -383,7 +1107,6 @@
             }
 
             treePositions.forEach(pos => {
-                // Tree trunk
                 const trunkGeometry = new THREE.CylinderGeometry(0.5, 0.7, 5, 8);
                 const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
                 const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
@@ -391,7 +1114,6 @@
                 trunk.castShadow = true;
                 scene.add(trunk);
 
-                // Tree foliage
                 const foliageGeometry = new THREE.ConeGeometry(3, 6, 8);
                 const foliageMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22 });
                 const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
@@ -400,7 +1122,6 @@
                 scene.add(foliage);
             });
 
-            // Starting grid
             const gridMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
             for (let i = 0; i < 3; i++) {
                 const gridGeometry = new THREE.PlaneGeometry(TRACK_WIDTH, 0.5);
@@ -411,92 +1132,141 @@
             }
         }
 
-        function updateCar(delta) {
-            if (!gameStarted || gameFinished) return;
+        function updateObstacles() {
+            obstacles.forEach(obstacle => {
+                if (obstacle.isMoving) {
+                    obstacle.mesh.position.x += obstacle.moveSpeed * obstacle.moveDirection;
+                    if (Math.abs(obstacle.mesh.position.x - obstacle.originalX) > obstacle.moveRange) {
+                        obstacle.moveDirection *= -1;
+                    }
+                    const maxX = TRACK_WIDTH / 2 - 3;
+                    if (obstacle.mesh.position.x > maxX) {
+                        obstacle.mesh.position.x = maxX;
+                        obstacle.moveDirection = -1;
+                    } else if (obstacle.mesh.position.x < -maxX) {
+                        obstacle.mesh.position.x = -maxX;
+                        obstacle.moveDirection = 1;
+                    }
+                    if (obstacle.mesh.userData && obstacle.mesh.userData.isLabubu) {
+                        obstacle.mesh.rotation.y = obstacle.moveDirection > 0 ? Math.PI / 2 : -Math.PI / 2;
+                    }
+                }
+            });
+        }
 
-            // Store previous position for collision resolution
+        function checkRamps() {
+            if (car.isJumping) return;
+
+            for (const ramp of ramps) {
+                const carX = car.position.x;
+                const carZ = car.position.z;
+
+                // Check if car is on ramp
+                if (Math.abs(carX - ramp.x) < ramp.width / 2 &&
+                    carZ < ramp.z && carZ > ramp.z - ramp.length) {
+
+                    // Calculate height on ramp
+                    const rampProgress = (ramp.z - carZ) / ramp.length;
+                    const rampY = rampProgress * ramp.height;
+
+                    if (car.position.y <= rampY + 1.1) {
+                        car.position.y = rampY + 1;
+
+                        // Launch when reaching top of ramp
+                        if (rampProgress > 0.9 && car.speed > 0.5) {
+                            car.velocityY = JUMP_VELOCITY * (car.speed / CAR_MAX_SPEED);
+                            car.isJumping = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateCarPhysics() {
+            // Apply gravity when jumping
+            if (car.isJumping || car.position.y > 1.01) {
+                car.velocityY -= GRAVITY;
+                car.position.y += car.velocityY;
+
+                if (car.position.y <= 1) {
+                    car.position.y = 1;
+                    car.velocityY = 0;
+                    car.isJumping = false;
+                }
+            }
+        }
+
+        function updateCar(delta) {
+            if (!gameStarted || gameFinished || gameOver) return;
+
             const prevX = car.position.x;
             const prevZ = car.position.z;
 
-            // Acceleration
-            if (keys['ArrowUp']) {
+            if (isKeyPressed('ArrowUp')) {
                 car.speed += CAR_ACCELERATION;
             }
-            // Braking
-            if (keys['ArrowDown']) {
+            if (isKeyPressed('ArrowDown')) {
                 car.speed -= CAR_BRAKE_FORCE;
             }
 
-            // Apply friction
             car.speed *= (1 - CAR_FRICTION);
-
-            // Clamp speed
             car.speed = Math.max(-CAR_MAX_SPEED / 2, Math.min(CAR_MAX_SPEED, car.speed));
 
-            // Steering (only when moving) - FIXED DIRECTION
             if (Math.abs(car.speed) > 0.01) {
-                if (keys['ArrowLeft']) {
+                if (isKeyPressed('ArrowLeft')) {
                     car.rotation += CAR_TURN_SPEED * Math.sign(car.speed);
                 }
-                if (keys['ArrowRight']) {
+                if (isKeyPressed('ArrowRight')) {
                     car.rotation -= CAR_TURN_SPEED * Math.sign(car.speed);
                 }
             }
 
-            // Calculate movement vector - FIXED: negated sin for correct direction
             const moveX = -Math.sin(car.rotation) * car.speed;
             const moveZ = -Math.cos(car.rotation) * car.speed;
 
-            // Apply movement
             car.position.x += moveX;
             car.position.z += moveZ;
 
-            // Check collisions and resolve them
-            checkCollisions(prevX, prevZ, moveX, moveZ);
+            checkRamps();
+            updateCarPhysics();
 
-            // Update car mesh
+            // Only check collisions if not high in the air
+            if (car.position.y < 3) {
+                checkCollisions(prevX, prevZ, moveX, moveZ);
+            }
+
             car.mesh.position.copy(car.position);
             car.mesh.rotation.y = car.rotation;
 
-            // Update camera (first person view)
             const cameraOffset = new THREE.Vector3(0, 1.5, 0.5);
             cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation);
             camera.position.copy(car.position).add(cameraOffset);
             camera.rotation.y = car.rotation;
 
-            // Check finish line
             if (car.position.z < -TRACK_LENGTH + 25) {
                 finishGame();
             }
         }
 
-        const CAR_HALF_WIDTH = 1.5;  // Half the car's width for collision
-        const CAR_HALF_LENGTH = 2.5; // Half the car's length for collision
+        const CAR_HALF_WIDTH = 1.5;
 
         function checkCollisions(prevX, prevZ, moveX, moveZ) {
             const currentTime = Date.now();
-            const collisionCooldown = 300; // ms between collision slowdown effects
+            const collisionCooldown = 300;
             let collided = false;
 
-            // Wall collisions - walls are solid barriers
             const wallLimit = TRACK_WIDTH / 2 - CAR_HALF_WIDTH;
 
-            // Left wall collision
             if (car.position.x < -wallLimit) {
                 car.position.x = -wallLimit;
-                // Kill the X component of velocity when hitting wall
-                // Allow sliding along the wall (Z movement continues)
                 collided = true;
             }
-
-            // Right wall collision
             if (car.position.x > wallLimit) {
                 car.position.x = wallLimit;
                 collided = true;
             }
 
-            // Obstacle collisions - solid objects car cannot pass through
-            const carRadius = CAR_HALF_WIDTH; // Simplified collision as circle
+            const carRadius = CAR_HALF_WIDTH;
 
             obstacles.forEach(obstacle => {
                 const dx = car.position.x - obstacle.mesh.position.x;
@@ -505,27 +1275,16 @@
                 const minDist = obstacle.radius + carRadius;
 
                 if (distance < minDist) {
-                    // Collision detected - push car out to the edge of obstacle
-                    // This creates the "rubbing" effect where car slides along the surface
-
                     if (distance > 0.01) {
-                        // Normalize the collision vector and push car out
                         const nx = dx / distance;
                         const nz = dz / distance;
-
-                        // Move car to exactly touch the obstacle (no penetration)
                         car.position.x = obstacle.mesh.position.x + nx * minDist;
                         car.position.z = obstacle.mesh.position.z + nz * minDist;
-
-                        // Remove velocity component going into the obstacle
-                        // This allows sliding along the obstacle surface
                         const dotProduct = (moveX * nx + moveZ * nz);
                         if (dotProduct < 0) {
-                            // Car was moving into obstacle, reduce speed
                             collided = true;
                         }
                     } else {
-                        // Car is exactly on obstacle center (rare), push it back
                         car.position.x = prevX;
                         car.position.z = prevZ;
                         collided = true;
@@ -533,13 +1292,11 @@
                 }
             });
 
-            // Keep car on track (z-axis bounds) - can't go backwards past start
             if (car.position.z > 10) {
                 car.position.z = 10;
                 collided = true;
             }
 
-            // Apply collision slowdown effect (with cooldown to prevent rapid-fire)
             if (collided && currentTime - lastCollisionTime > collisionCooldown) {
                 applyCollisionEffect();
             }
@@ -549,18 +1306,49 @@
             car.speed *= COLLISION_SLOWDOWN;
             lastCollisionTime = Date.now();
 
-            // Visual feedback
+            // Reduce health
+            health -= COLLISION_DAMAGE;
+            if (health < 0) health = 0;
+            updateHealthBar();
+
             const flash = document.getElementById('collision-flash');
             flash.style.opacity = '1';
             setTimeout(() => {
                 flash.style.opacity = '0';
             }, 100);
+
+            // Check for game over
+            if (health <= 0) {
+                triggerGameOver();
+            }
+        }
+
+        function updateHealthBar() {
+            const healthBar = document.getElementById('health-bar');
+            const percentage = (health / MAX_HEALTH) * 100;
+            healthBar.style.width = percentage + '%';
+
+            healthBar.classList.remove('medium', 'low');
+            if (percentage <= 30) {
+                healthBar.classList.add('low');
+            } else if (percentage <= 60) {
+                healthBar.classList.add('medium');
+            }
+        }
+
+        function triggerGameOver() {
+            gameOver = true;
+            gameFinished = true;
+            const message = document.getElementById('message');
+            message.innerHTML = `WASTED!<br><span style="font-size: 24px; color: #ff6b6b;">Your car is destroyed!</span><br><span style="font-size: 20px;">Press SPACE to try again</span>`;
+            message.style.display = 'block';
+            message.style.color = '#ff0000';
         }
 
         function finishGame() {
             gameFinished = true;
             const message = document.getElementById('message');
-            message.innerHTML = `FINISH!<br>Time: ${gameTime.toFixed(2)}s`;
+            message.innerHTML = `FINISH!<br>Time: ${gameTime.toFixed(2)}s<br><span style="font-size: 24px">Press SPACE to restart</span>`;
             message.style.display = 'block';
             message.style.color = '#00ff00';
         }
@@ -569,31 +1357,51 @@
             car.position.set(0, 1, 0);
             car.rotation = 0;
             car.speed = 0;
+            car.velocityY = 0;
+            car.isJumping = false;
             gameTime = 0;
             gameStarted = false;
             gameFinished = false;
-            document.getElementById('message').style.display = 'none';
+            gameOver = false;
+            health = MAX_HEALTH;
+            updateHealthBar();
+
+            car.mesh.position.copy(car.position);
+            car.mesh.rotation.y = car.rotation;
+            camera.position.set(0, 2.5, 0.5);
+            camera.rotation.y = 0;
+
+            obstacles.forEach(obstacle => {
+                if (obstacle.isMoving) {
+                    obstacle.mesh.position.x = obstacle.originalX;
+                }
+            });
+
+            const message = document.getElementById('message');
+            message.innerHTML = isMobile ? 'READY!<br>Touch controls to Start' : 'READY!<br>Press Arrow Keys to Start';
+            message.style.display = 'block';
+            message.style.color = '#ffff00';
         }
 
         function updateUI() {
             const mph = Math.abs(car.speed * 60).toFixed(0);
             document.getElementById('speedometer').textContent = `${mph} MPH`;
             document.getElementById('timer').textContent = `Time: ${gameTime.toFixed(2)}s`;
-
             const progress = Math.max(0, Math.min(100, (-car.position.z / (TRACK_LENGTH - 20)) * 100));
             document.getElementById('lap').textContent = `Progress: ${progress.toFixed(0)}%`;
         }
 
         function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
         }
 
         let lastTime = 0;
         function animate(currentTime) {
-            requestAnimationFrame(animate);
-
+            animationId = requestAnimationFrame(animate);
             const delta = (currentTime - lastTime) / 1000;
             lastTime = currentTime;
 
@@ -601,13 +1409,11 @@
                 gameTime += delta;
             }
 
+            updateObstacles();
             updateCar(delta);
             updateUI();
             renderer.render(scene, camera);
         }
-
-        // Start the game
-        init();
     </script>
 </body>
 </html>

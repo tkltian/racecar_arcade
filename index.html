@@ -1058,13 +1058,13 @@
 
         // ============== MULTIPLAYER ==============
         let peer = null;
-        let conn = null;
+        let connections = {}; // Multiple connections keyed by peerId
+        let conn = null; // For joiners - their connection to host
         let isHost = false;
         let multiplayerActive = false;
-        let opponentCar = null;
-        let opponentData = { x: 0, z: 0, rotation: 0, progress: 0 };
-        let opponentFinishTime = null;
+        let opponents = {}; // Multiple opponents keyed by odpeerId: { car, data, finishTime }
         let isPenaltyActive = false;
+        let myPeerId = null;
 
         // Connection resilience
         let currentRoomCode = null;
@@ -1074,6 +1074,16 @@
         const MAX_RECONNECT_ATTEMPTS = 5;
         const HEARTBEAT_INTERVAL = 1000; // 1 second
         const HEARTBEAT_TIMEOUT = 3000; // 3 seconds without heartbeat = disconnected
+
+        // Colors for different players
+        const PLAYER_COLORS = [
+            0x00ffff, // Cyan
+            0xff00ff, // Magenta
+            0xffff00, // Yellow
+            0x00ff00, // Green
+            0xff8800, // Orange
+            0x8800ff, // Purple
+        ];
 
         // ICE servers for WebRTC NAT traversal
         const peerConfig = {
@@ -1117,12 +1127,24 @@
             }
         }
 
+        function getPlayerCount() {
+            return Object.keys(connections).length + 1; // +1 for host
+        }
+
+        function updatePlayerCount() {
+            const count = getPlayerCount();
+            document.getElementById('host-status').textContent = count + ' player' + (count > 1 ? 's' : '') + ' in lobby';
+            document.getElementById('opponent-name').textContent = count + ' player' + (count > 1 ? 's' : '') + ' ready';
+        }
+
         function hostGame() {
             const roomCode = generateRoomCode();
             currentRoomCode = roomCode;
             reconnectAttempts = 0;
+            connections = {};
+            opponents = {};
             document.getElementById('room-code').textContent = roomCode;
-            document.getElementById('host-status').textContent = 'Waiting for player to join...';
+            document.getElementById('host-status').textContent = 'Waiting for players to join...';
 
             document.getElementById('mp-initial').style.display = 'none';
             document.getElementById('mp-hosting').style.display = 'block';
@@ -1133,30 +1155,31 @@
 
             peer.on('open', function(id) {
                 console.log('Host peer ready with ID:', id);
+                myPeerId = id;
             });
 
             peer.on('connection', function(connection) {
-                conn = connection;
-                console.log('Incoming connection...');
-                document.getElementById('host-status').textContent = 'Player connecting...';
+                const peerId = connection.peer;
+                console.log('Incoming connection from:', peerId);
 
-                conn.on('open', function() {
-                    console.log('Connection open!');
-                    document.getElementById('host-status').textContent = 'Player connected!';
-                    setupConnection();
+                connection.on('open', function() {
+                    console.log('Connection open from:', peerId);
+                    connections[peerId] = connection;
+                    setupHostConnection(connection, peerId);
+                    updatePlayerCount();
 
                     // Show connected state (host sees start button)
-                    setTimeout(() => {
-                        document.getElementById('mp-hosting').style.display = 'none';
-                        document.getElementById('mp-connected').style.display = 'block';
-                        document.getElementById('mp-host-controls').style.display = 'block';
-                        document.getElementById('mp-joiner-controls').style.display = 'none';
-                    }, 500);
+                    document.getElementById('mp-hosting').style.display = 'none';
+                    document.getElementById('mp-connected').style.display = 'block';
+                    document.getElementById('mp-host-controls').style.display = 'block';
+                    document.getElementById('mp-joiner-controls').style.display = 'none';
+
+                    // Notify all players about the new player count
+                    broadcastToAll({ type: 'playerCount', count: getPlayerCount() });
                 });
 
-                conn.on('error', function(err) {
-                    console.error('Host connection error:', err);
-                    document.getElementById('host-status').textContent = 'Connection error. Try again.';
+                connection.on('error', function(err) {
+                    console.error('Connection error from ' + peerId + ':', err);
                 });
             });
 
@@ -1233,6 +1256,68 @@
             });
         }
 
+        // Broadcast data to all connected players (host only)
+        function broadcastToAll(data) {
+            Object.values(connections).forEach(function(connection) {
+                if (connection && connection.open) {
+                    connection.send(data);
+                }
+            });
+        }
+
+        // Relay data from one player to all others (host only)
+        function relayToOthers(fromPeerId, data) {
+            Object.entries(connections).forEach(function([peerId, connection]) {
+                if (peerId !== fromPeerId && connection && connection.open) {
+                    connection.send(data);
+                }
+            });
+        }
+
+        // Setup connection handler for HOST (handles multiple players)
+        function setupHostConnection(connection, peerId) {
+            multiplayerActive = true;
+
+            connection.on('data', function(data) {
+                if (data.type === 'position') {
+                    // Store this player's position
+                    if (!opponents[peerId]) {
+                        opponents[peerId] = { data: {}, finishTime: null, car: null };
+                    }
+                    opponents[peerId].data = data;
+                    updateOpponentCar(peerId);
+
+                    // Relay to all other players (include sender's peerId)
+                    data.peerId = peerId;
+                    relayToOthers(peerId, data);
+                } else if (data.type === 'finish') {
+                    // Player finished
+                    if (!opponents[peerId]) {
+                        opponents[peerId] = { data: {}, finishTime: null, car: null };
+                    }
+                    opponents[peerId].finishTime = data.time;
+                    showOpponentFinished(data.time, peerId);
+
+                    // Relay to all other players
+                    data.peerId = peerId;
+                    relayToOthers(peerId, data);
+                }
+            });
+
+            connection.on('close', function() {
+                console.log('Player disconnected:', peerId);
+                delete connections[peerId];
+                if (opponents[peerId] && opponents[peerId].car && scene) {
+                    scene.remove(opponents[peerId].car);
+                }
+                delete opponents[peerId];
+                updatePlayerCount();
+                broadcastToAll({ type: 'playerCount', count: getPlayerCount() });
+                broadcastToAll({ type: 'playerLeft', peerId: peerId });
+            });
+        }
+
+        // Setup connection handler for JOINER (connects to host)
         function setupConnection() {
             multiplayerActive = true;
             lastHeartbeat = Date.now();
@@ -1246,8 +1331,13 @@
                 lastHeartbeat = Date.now();
 
                 if (data.type === 'position') {
-                    opponentData = data;
-                    updateOpponentCar();
+                    // Position from another player (relayed by host) or from host
+                    const odppId = data.peerId || 'host';
+                    if (!opponents[odppId]) {
+                        opponents[odppId] = { data: {}, finishTime: null, car: null };
+                    }
+                    opponents[odppId].data = data;
+                    updateOpponentCar(odppId);
                 } else if (data.type === 'heartbeat') {
                     // Respond to heartbeat
                     if (conn && conn.open) {
@@ -1257,7 +1347,7 @@
                     // Heartbeat acknowledged, connection is healthy
                     lastHeartbeat = Date.now();
                 } else if (data.type === 'start') {
-                    // Other player (host) started the game - apply their settings
+                    // Host started the game - apply their settings
                     if (!gameStarted) {
                         if (data.settings) {
                             console.log('Received host settings:', data.settings);
@@ -1270,11 +1360,32 @@
                                 gameInitialized = false;
                             }
                         }
+                        if (data.players) {
+                            // Create opponent cars for all other players
+                            data.players.forEach(function(playerId) {
+                                if (playerId !== myPeerId) {
+                                    opponents[playerId] = { data: {}, finishTime: null, car: null };
+                                }
+                            });
+                        }
                         startMultiplayerRace();
                     }
                 } else if (data.type === 'finish') {
-                    // Opponent finished
-                    showOpponentFinished(data.time);
+                    // Someone finished
+                    const odppId = data.peerId || 'host';
+                    if (!opponents[odppId]) {
+                        opponents[odppId] = { data: {}, finishTime: null, car: null };
+                    }
+                    opponents[odppId].finishTime = data.time;
+                    showOpponentFinished(data.time, odppId);
+                } else if (data.type === 'playerCount') {
+                    document.getElementById('opponent-name').textContent = data.count + ' players ready';
+                } else if (data.type === 'playerLeft') {
+                    // Remove disconnected player's car
+                    if (opponents[data.peerId] && opponents[data.peerId].car && scene) {
+                        scene.remove(opponents[data.peerId].car);
+                    }
+                    delete opponents[data.peerId];
                 }
             });
 
@@ -1374,6 +1485,12 @@
 
         function cancelMultiplayer() {
             stopHeartbeat();
+            // Close all connections (for host)
+            Object.values(connections).forEach(function(connection) {
+                if (connection) connection.close();
+            });
+            connections = {};
+            // Close single connection (for joiner)
             if (conn) {
                 conn.close();
                 conn = null;
@@ -1382,6 +1499,13 @@
                 peer.destroy();
                 peer = null;
             }
+            // Clean up opponent cars
+            Object.values(opponents).forEach(function(opponent) {
+                if (opponent.car && scene) {
+                    scene.remove(opponent.car);
+                }
+            });
+            opponents = {};
             multiplayerActive = false;
             isHost = false;
             currentRoomCode = null;
@@ -1390,34 +1514,58 @@
         }
 
         function startMultiplayerGame() {
-            // Send start signal with game settings to opponent
-            if (conn && conn.open) {
-                conn.send({
-                    type: 'start',
-                    settings: {
-                        difficulty: gameSettings.difficulty,
-                        obstacleType: gameSettings.obstacleType,
-                        trackLayout: gameSettings.trackLayout
-                    }
-                });
-            }
+            // Host sends start signal with game settings to ALL players
+            const playerIds = Object.keys(connections);
+            playerIds.push(myPeerId); // Include host
+
+            broadcastToAll({
+                type: 'start',
+                settings: {
+                    difficulty: gameSettings.difficulty,
+                    obstacleType: gameSettings.obstacleType,
+                    trackLayout: gameSettings.trackLayout
+                },
+                players: playerIds
+            });
+
+            // Create opponent entries for all connected players
+            playerIds.forEach(function(playerId) {
+                if (playerId !== myPeerId) {
+                    opponents[playerId] = { data: {}, finishTime: null, car: null };
+                }
+            });
+
             startMultiplayerRace();
         }
 
         function startMultiplayerRace() {
             closeMultiplayerLobby();
             startGame();
-            createOpponentCar();
+            createAllOpponentCars();
         }
 
-        function createOpponentCar() {
+        function createAllOpponentCars() {
+            let colorIndex = 0;
+            Object.keys(opponents).forEach(function(odppId) {
+                const color = PLAYER_COLORS[colorIndex % PLAYER_COLORS.length];
+                opponents[odppId].car = createOpponentCar(color);
+                opponents[odppId].colorIndex = colorIndex;
+                colorIndex++;
+            });
+        }
+
+        function createOpponentCar(color) {
             // Create a ghost-like opponent car
             const opponentGroup = new THREE.Group();
+            color = color || 0x00ffff;
+
+            // Darken color for cabin
+            const cabinColor = (color & 0xfefefe) >> 1;
 
             // Semi-transparent body
             const bodyGeometry = new THREE.BoxGeometry(2, 0.8, 4);
             const bodyMaterial = new THREE.MeshPhongMaterial({
-                color: 0x00ffff,
+                color: color,
                 transparent: true,
                 opacity: 0.6
             });
@@ -1428,7 +1576,7 @@
             // Cabin
             const cabinGeometry = new THREE.BoxGeometry(1.6, 0.6, 2);
             const cabinMaterial = new THREE.MeshPhongMaterial({
-                color: 0x00aaaa,
+                color: cabinColor,
                 transparent: true,
                 opacity: 0.5
             });
@@ -1454,35 +1602,70 @@
                 opponentGroup.add(wheel);
             });
 
-            opponentCar = opponentGroup;
-            scene.add(opponentCar);
+            scene.add(opponentGroup);
+            return opponentGroup;
         }
 
-        function updateOpponentCar() {
-            if (opponentCar && opponentData) {
-                opponentCar.position.x = opponentData.x;
-                opponentCar.position.z = opponentData.z;
-                opponentCar.position.y = opponentData.y || 1;
-                opponentCar.rotation.y = opponentData.rotation;
+        function updateOpponentCar(odppId) {
+            const opponent = opponents[odppId];
+            if (!opponent) return;
+
+            // Create car if it doesn't exist yet
+            if (!opponent.car && scene) {
+                const colorIndex = Object.keys(opponents).indexOf(odppId);
+                const color = PLAYER_COLORS[colorIndex % PLAYER_COLORS.length];
+                opponent.car = createOpponentCar(color);
+            }
+
+            if (opponent.car && opponent.data) {
+                opponent.car.position.x = opponent.data.x;
+                opponent.car.position.z = opponent.data.z;
+                opponent.car.position.y = opponent.data.y || 1;
+                opponent.car.rotation.y = opponent.data.rotation;
             }
         }
 
         function sendPositionUpdate() {
-            if (conn && conn.open && multiplayerActive && gameStarted && !gameFinished) {
-                conn.send({
-                    type: 'position',
-                    x: car.position.x,
-                    z: car.position.z,
-                    y: car.position.y,
-                    rotation: car.rotation,
-                    progress: car.progress
-                });
+            if (!multiplayerActive || !gameStarted || gameFinished) return;
+
+            const posData = {
+                type: 'position',
+                x: car.position.x,
+                z: car.position.z,
+                y: car.position.y,
+                rotation: car.rotation,
+                progress: car.progress,
+                peerId: myPeerId
+            };
+
+            if (isHost) {
+                // Host broadcasts to all players
+                broadcastToAll(posData);
+            } else if (conn && conn.open) {
+                // Joiner sends to host
+                conn.send(posData);
             }
         }
 
-        function showOpponentFinished(time) {
-            opponentFinishTime = time;
+        function showOpponentFinished(time, peerId) {
+            // Store this opponent's finish time
+            if (opponents[peerId]) {
+                opponents[peerId].finishTime = time;
+            }
+
             const opponentTimeStr = time.toFixed(2);
+
+            // Count how many opponents have finished
+            let finishedCount = 0;
+            let bestOpponentTime = Infinity;
+            Object.values(opponents).forEach(function(opp) {
+                if (opp.finishTime !== null) {
+                    finishedCount++;
+                    if (opp.finishTime < bestOpponentTime) {
+                        bestOpponentTime = opp.finishTime;
+                    }
+                }
+            });
 
             if (gameFinished) {
                 // We already finished, update the message with final results
@@ -1490,21 +1673,23 @@
                 const restartHint = isMobile ? 'Tap ↺ to restart' : 'Press SPACE to restart';
                 let resultText = `FINISH!<br>Your Time: ${gameTime.toFixed(2)}s`;
 
-                if (gameTime < opponentFinishTime) {
+                // Compare against best opponent time
+                if (gameTime < bestOpponentTime) {
                     resultText += `<br><span style="color: #ffd700; font-size: 36px;">YOU WIN!</span>`;
-                } else if (gameTime > opponentFinishTime) {
-                    resultText += `<br><span style="color: #ff6b6b; font-size: 28px;">Opponent wins!</span>`;
+                } else if (gameTime > bestOpponentTime) {
+                    resultText += `<br><span style="color: #ff6b6b; font-size: 28px;">You lost!</span>`;
                 } else {
                     resultText += `<br><span style="color: #feca57; font-size: 28px;">It's a TIE!</span>`;
                 }
-                resultText += `<br><span style="font-size: 20px;">Opponent: ${opponentTimeStr}s</span>`;
+                resultText += `<br><span style="font-size: 20px;">Best opponent: ${bestOpponentTime.toFixed(2)}s</span>`;
                 resultText += `<br><span style="font-size: 24px">${restartHint}</span>`;
 
                 msg.innerHTML = resultText;
             } else {
-                // Show brief message that opponent finished (we're still racing)
+                // Show brief message that an opponent finished (we're still racing)
                 const msg = document.getElementById('message');
-                msg.innerHTML = `<span style="color: #00ffff;">Opponent finished: ${opponentTimeStr}s</span>`;
+                const playerNum = Object.keys(opponents).indexOf(peerId) + 1;
+                msg.innerHTML = `<span style="color: #00ffff;">Player ${playerNum} finished: ${opponentTimeStr}s</span>`;
                 msg.style.display = 'block';
                 msg.style.fontSize = '28px';
                 setTimeout(() => {
@@ -1844,13 +2029,20 @@
 
             // Clean up multiplayer
             stopHeartbeat();
-            if (opponentCar && scene) {
-                scene.remove(opponentCar);
-                opponentCar = null;
-            }
-            opponentFinishTime = null;
+            // Clean up all opponent cars
+            Object.values(opponents).forEach(function(opponent) {
+                if (opponent.car && scene) {
+                    scene.remove(opponent.car);
+                }
+            });
+            opponents = {};
             isPenaltyActive = false;
-            // Clean up connection when leaving game
+            // Clean up all connections (for host)
+            Object.values(connections).forEach(function(connection) {
+                if (connection) connection.close();
+            });
+            connections = {};
+            // Clean up single connection (for joiner)
             if (conn) {
                 conn.close();
                 conn = null;
@@ -3731,28 +3923,43 @@
         function finishGame() {
             gameFinished = true;
 
-            // Send finish event to opponent
-            if (multiplayerActive && conn && conn.open) {
-                conn.send({ type: 'finish', time: gameTime });
+            // Send finish event to all other players
+            if (multiplayerActive) {
+                const finishData = { type: 'finish', time: gameTime, peerId: myPeerId };
+                if (isHost) {
+                    broadcastToAll(finishData);
+                } else if (conn && conn.open) {
+                    conn.send(finishData);
+                }
             }
 
             const message = document.getElementById('message');
             const restartHint = isMobile ? 'Tap ↺ to restart' : 'Press SPACE to restart';
 
+            // Find best opponent time
+            let bestOpponentTime = null;
+            Object.values(opponents).forEach(function(opponent) {
+                if (opponent.finishTime !== null) {
+                    if (bestOpponentTime === null || opponent.finishTime < bestOpponentTime) {
+                        bestOpponentTime = opponent.finishTime;
+                    }
+                }
+            });
+
             // Show multiplayer results if applicable
             let resultText = `FINISH!<br>Your Time: ${gameTime.toFixed(2)}s`;
-            if (multiplayerActive && opponentFinishTime !== null) {
-                if (gameTime < opponentFinishTime) {
+            if (multiplayerActive && bestOpponentTime !== null) {
+                if (gameTime < bestOpponentTime) {
                     resultText += `<br><span style="color: #ffd700; font-size: 36px;">YOU WIN!</span>`;
-                    resultText += `<br><span style="font-size: 20px;">Opponent: ${opponentFinishTime.toFixed(2)}s</span>`;
-                } else if (gameTime > opponentFinishTime) {
-                    resultText += `<br><span style="color: #ff6b6b; font-size: 28px;">Opponent wins!</span>`;
-                    resultText += `<br><span style="font-size: 20px;">Opponent: ${opponentFinishTime.toFixed(2)}s</span>`;
+                    resultText += `<br><span style="font-size: 20px;">Best opponent: ${bestOpponentTime.toFixed(2)}s</span>`;
+                } else if (gameTime > bestOpponentTime) {
+                    resultText += `<br><span style="color: #ff6b6b; font-size: 28px;">You lost!</span>`;
+                    resultText += `<br><span style="font-size: 20px;">Best opponent: ${bestOpponentTime.toFixed(2)}s</span>`;
                 } else {
                     resultText += `<br><span style="color: #feca57; font-size: 28px;">It's a TIE!</span>`;
                 }
             } else if (multiplayerActive) {
-                resultText += `<br><span style="font-size: 20px; color: #00ffff;">Waiting for opponent...</span>`;
+                resultText += `<br><span style="font-size: 20px; color: #00ffff;">Waiting for others...</span>`;
             }
             resultText += `<br><span style="font-size: 24px">${restartHint}</span>`;
 
@@ -3781,12 +3988,16 @@
             updateHealthBar();
 
             // Reset multiplayer state for new race
-            opponentFinishTime = null;
             isPenaltyActive = false;
-            if (opponentCar) {
-                opponentCar.position.set(0, 1, 2); // Slightly behind player
-                opponentCar.rotation.y = 0;
-            }
+            // Reset all opponent states
+            Object.values(opponents).forEach(function(opponent, index) {
+                opponent.finishTime = null;
+                opponent.data = {};
+                if (opponent.car) {
+                    opponent.car.position.set(0, 1, 2 + index * 2); // Stagger positions behind player
+                    opponent.car.rotation.y = 0;
+                }
+            });
 
             car.mesh.position.copy(car.position);
             car.mesh.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation);
@@ -3937,26 +4148,37 @@
             );
             ctx.stroke();
 
-            // Draw opponent car in multiplayer
-            if (multiplayerActive && opponentData && opponentData.x !== undefined) {
-                const oppPos = toCanvas(opponentData.x, opponentData.z);
+            // Draw all opponent cars in multiplayer
+            if (multiplayerActive) {
+                let colorIndex = 0;
+                Object.values(opponents).forEach(function(opponent) {
+                    if (opponent.data && opponent.data.x !== undefined) {
+                        const oppPos = toCanvas(opponent.data.x, opponent.data.z);
 
-                // Opponent car dot (cyan)
-                ctx.fillStyle = '#00ffff';
-                ctx.beginPath();
-                ctx.arc(oppPos.x, oppPos.y, 4, 0, Math.PI * 2);
-                ctx.fill();
+                        // Get color for this opponent
+                        const color = PLAYER_COLORS[colorIndex % PLAYER_COLORS.length];
+                        const colorHex = '#' + color.toString(16).padStart(6, '0');
 
-                // Opponent direction indicator
-                ctx.strokeStyle = '#00ffff';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(oppPos.x, oppPos.y);
-                ctx.lineTo(
-                    oppPos.x + Math.sin(opponentData.rotation) * 8,
-                    oppPos.y - Math.cos(opponentData.rotation) * 8
-                );
-                ctx.stroke();
+                        // Opponent car dot
+                        ctx.fillStyle = colorHex;
+                        ctx.beginPath();
+                        ctx.arc(oppPos.x, oppPos.y, 4, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        // Opponent direction indicator
+                        ctx.strokeStyle = colorHex;
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(oppPos.x, oppPos.y);
+                        ctx.lineTo(
+                            oppPos.x + Math.sin(opponent.data.rotation) * 8,
+                            oppPos.y - Math.cos(opponent.data.rotation) * 8
+                        );
+                        ctx.stroke();
+
+                        colorIndex++;
+                    }
+                });
             }
         }
 

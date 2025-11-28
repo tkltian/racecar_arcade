@@ -2125,23 +2125,21 @@
             labubuGroup.add(nose);
 
             // === MOUTH - Wide mischievous grin ===
-            // Mouth opening (curved smile shape)
-            const mouthCurve = new THREE.EllipseCurve(0, 0, 0.6, 0.35, Math.PI * 0.15, Math.PI * 0.85, false, 0);
-            const mouthPoints = mouthCurve.getPoints(20);
-            const mouthShape = new THREE.Shape(mouthPoints);
-            const mouthGeometry = new THREE.ShapeGeometry(mouthShape);
-            const mouthMaterial = new THREE.MeshBasicMaterial({ color: 0x1a0000, side: THREE.DoubleSide });
+            // Mouth opening (using torus for curved smile - r128 compatible)
+            const mouthGeometry = new THREE.TorusGeometry(0.5, 0.12, 8, 16, Math.PI);
+            const mouthMaterial = new THREE.MeshBasicMaterial({ color: 0x1a0000 });
             const mouth = new THREE.Mesh(mouthGeometry, mouthMaterial);
-            mouth.position.set(0, 1.55, 1.55);
-            mouth.rotation.x = 0.1;
+            mouth.position.set(0, 1.6, 1.4);
+            mouth.rotation.x = Math.PI;
+            mouth.rotation.z = Math.PI;
             labubuGroup.add(mouth);
 
             // Dark mouth interior
-            const mouthInteriorGeometry = new THREE.SphereGeometry(0.5, 16, 16);
-            const mouthInteriorMaterial = new THREE.MeshBasicMaterial({ color: 0x220000 });
+            const mouthInteriorGeometry = new THREE.SphereGeometry(0.45, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+            const mouthInteriorMaterial = new THREE.MeshBasicMaterial({ color: 0x330000, side: THREE.BackSide });
             const mouthInterior = new THREE.Mesh(mouthInteriorGeometry, mouthInteriorMaterial);
-            mouthInterior.position.set(0, 1.6, 1.3);
-            mouthInterior.scale.set(1.2, 0.6, 0.5);
+            mouthInterior.position.set(0, 1.6, 1.25);
+            mouthInterior.rotation.x = Math.PI / 2;
             labubuGroup.add(mouthInterior);
 
             // === 9 SHARP TEETH - Signature Labubu mischievous smile! ===

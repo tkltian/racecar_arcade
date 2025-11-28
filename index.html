@@ -1941,13 +1941,12 @@
                 actualCount = Math.min(actualCount, 4);
             }
 
-            // For baby mode, space obstacles evenly throughout track instead of clustering at start
-            let selectedPositions = obstaclePositions.slice(0, actualCount);
-            if (gameSettings.difficulty === 'baby' && obstaclePositions.length > 4) {
-                selectedPositions = [];
-                const spacing = Math.floor(obstaclePositions.length / 4);
-                for (let i = 0; i < 4; i++) {
-                    const idx = Math.min(spacing * i + Math.floor(spacing / 2), obstaclePositions.length - 1);
+            // Evenly distribute obstacles throughout track for all difficulty modes
+            let selectedPositions = [];
+            if (actualCount > 0 && obstaclePositions.length > 0) {
+                const spacing = obstaclePositions.length / actualCount;
+                for (let i = 0; i < actualCount; i++) {
+                    const idx = Math.min(Math.floor(spacing * i + spacing / 2), obstaclePositions.length - 1);
                     selectedPositions.push(obstaclePositions[idx]);
                 }
             }
@@ -2771,7 +2770,7 @@
             // Stop if game ended (e.g., landed off track) but update mesh first
             if (gameOver || gameFinished) {
                 car.mesh.position.copy(car.position);
-                car.mesh.rotation.y = car.rotation;
+                car.mesh.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation);
                 return;
             }
 
@@ -2781,15 +2780,17 @@
             }
 
             car.mesh.position.copy(car.position);
-            car.mesh.rotation.y = car.rotation;
 
             // Tilt car and camera forward when in the air so player can see the ground
+            // Tilt is relative to car's facing direction (local pitch, not world X)
             if (car.airTilt === undefined) car.airTilt = 0;
 
             if (car.isJumping || car.position.y > 1.5) {
-                // Always tilt forward to see ground - more tilt when higher
-                const heightFactor = Math.min(1, (car.position.y - 1) / 10);
-                const targetTilt = 0.3 + heightFactor * 0.2;  // 0.3 to 0.5 radians forward tilt
+                // More tilt when higher, and extra tilt when moving slow (dropping straight down)
+                const heightFactor = Math.min(1, (car.position.y - 1) / 8);
+                const speedFactor = 1 - Math.min(1, Math.abs(car.speed) / CAR_MAX_SPEED);  // Higher when slower
+                // Base tilt + height bonus + slow speed bonus (more aggressive when dropping)
+                const targetTilt = 0.25 + heightFactor * 0.25 + speedFactor * heightFactor * 0.3;
                 // Smooth transition
                 car.airTilt = car.airTilt * 0.9 + targetTilt * 0.1;
             } else {
@@ -2797,14 +2798,19 @@
                 car.airTilt *= 0.8;
                 if (Math.abs(car.airTilt) < 0.01) car.airTilt = 0;
             }
-            // Tilt car nose down and camera looking down
-            car.mesh.rotation.x = -car.airTilt;  // Negative = nose tilts down
+
+            // Apply rotation using quaternion to tilt forward in car's local space
+            const yawQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation);
+            const pitchQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -car.airTilt);
+            // Combine: first yaw (heading), then pitch (tilt forward relative to heading)
+            const combinedQuat = yawQuat.multiply(pitchQuat);
+            car.mesh.quaternion.copy(combinedQuat);
 
             const cameraOffset = new THREE.Vector3(0, 1.5, 0.5);
             cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation);
             camera.position.copy(car.position).add(cameraOffset);
-            camera.rotation.x = -car.airTilt;  // Negative = look down
-            camera.rotation.y = car.rotation;
+            // Camera also tilts in local space
+            camera.quaternion.copy(combinedQuat);
 
             // Check if reached finish line
             if (window.finishLinePos) {
@@ -3027,11 +3033,9 @@
             updateHealthBar();
 
             car.mesh.position.copy(car.position);
-            car.mesh.rotation.x = 0;
-            car.mesh.rotation.y = car.rotation;
+            car.mesh.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation);
             camera.position.set(0, 2.5, 0.5);
-            camera.rotation.x = 0;
-            camera.rotation.y = 0;
+            camera.quaternion.set(0, 0, 0, 1);  // Reset to identity
 
             obstacles.forEach(obstacle => {
                 if (obstacle.isMoving) {

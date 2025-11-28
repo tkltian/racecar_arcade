@@ -1221,9 +1221,15 @@
                     // Other player (host) started the game - apply their settings
                     if (!gameStarted) {
                         if (data.settings) {
+                            console.log('Received host settings:', data.settings);
                             gameSettings.difficulty = data.settings.difficulty;
                             gameSettings.obstacleType = data.settings.obstacleType;
                             gameSettings.trackLayout = data.settings.trackLayout;
+                            // Force cleanup to ensure fresh initialization with new settings
+                            if (gameInitialized) {
+                                cleanupGame();
+                                gameInitialized = false;
+                            }
                         }
                         startMultiplayerRace();
                     }

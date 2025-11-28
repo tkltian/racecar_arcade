@@ -496,6 +496,22 @@
                     <canvas class="track-preview" id="preview-insane"></canvas>
                     <div class="track-name">Insane</div>
                 </div>
+                <div class="track-option" data-track="grandprix" onclick="selectTrack('grandprix')">
+                    <canvas class="track-preview" id="preview-grandprix"></canvas>
+                    <div class="track-name">Grand Prix</div>
+                </div>
+                <div class="track-option" data-track="mountain" onclick="selectTrack('mountain')">
+                    <canvas class="track-preview" id="preview-mountain"></canvas>
+                    <div class="track-name">Mountain</div>
+                </div>
+                <div class="track-option" data-track="coastal" onclick="selectTrack('coastal')">
+                    <canvas class="track-preview" id="preview-coastal"></canvas>
+                    <div class="track-name">Coastal</div>
+                </div>
+                <div class="track-option" data-track="championship" onclick="selectTrack('championship')">
+                    <canvas class="track-preview" id="preview-championship"></canvas>
+                    <div class="track-name">Championship</div>
+                </div>
             </div>
         </div>
         <div class="menu-buttons">
@@ -508,15 +524,6 @@
     <div id="settings-overlay" onclick="closeSettings()"></div>
     <div id="settings-panel">
         <h2>Game Settings</h2>
-
-        <div class="setting-group">
-            <label>Track Length</label>
-            <div class="setting-options">
-                <div class="setting-option" data-setting="trackLength" data-value="short">Short</div>
-                <div class="setting-option selected" data-setting="trackLength" data-value="medium">Medium</div>
-                <div class="setting-option" data-setting="trackLength" data-value="long">Long</div>
-            </div>
-        </div>
 
         <div class="setting-group">
             <label>Difficulty</label>
@@ -592,17 +599,13 @@
     <script>
         // Game Settings
         let gameSettings = {
-            trackLength: 'medium',
             difficulty: 'medium',
             obstacleType: 'labubu',
             trackLayout: 'serpentine'
         };
 
-        const TRACK_LENGTHS = {
-            short: 800,
-            medium: 1600,
-            long: 2400
-        };
+        // Fixed track length (medium)
+        const TRACK_LENGTH = 1600;
 
         // Labubu colors based on Pop Mart "Big Into Energy" series
         // Secret (black) is rare: 1/36 probability
@@ -632,7 +635,6 @@
 
         // Game constants
         const TRACK_WIDTH = 30;
-        let TRACK_LENGTH = 800;
         const WALL_HEIGHT = 5;
         const CAR_MAX_SPEED = 2;
         const CAR_ACCELERATION = 0.02;
@@ -807,14 +809,110 @@
                     { start: 0.82, end: 0.89, rate: 0.35 },
                     { start: 0.90, end: 0.97, rate: -0.30 },
                 ];
+            } else if (layout === 'grandprix') {
+                // 2x longer: F1-style with chicanes, sweepers, and straights
+                return [
+                    // Straight then tight chicane
+                    { start: 0.06, end: 0.09, rate: 0.30 },   // Sharp right
+                    { start: 0.10, end: 0.13, rate: -0.35 },  // Sharp left
+                    // Long sweeping right
+                    { start: 0.18, end: 0.28, rate: 0.06 },   // Wide sweeper
+                    // Straight section (no curves 0.28-0.34)
+                    // Tight hairpin
+                    { start: 0.35, end: 0.42, rate: -0.38 },  // Tight left hairpin
+                    // Medium right curve
+                    { start: 0.47, end: 0.53, rate: 0.12 },   // Medium right
+                    // Another chicane
+                    { start: 0.58, end: 0.61, rate: -0.28 },  // Quick left
+                    { start: 0.62, end: 0.65, rate: 0.30 },   // Quick right
+                    // Long sweeping left
+                    { start: 0.70, end: 0.80, rate: -0.05 },  // Wide sweeper left
+                    // Final tight section
+                    { start: 0.85, end: 0.90, rate: 0.25 },   // Tight right
+                    { start: 0.93, end: 0.97, rate: -0.15 },  // Medium left to finish
+                ];
+            } else if (layout === 'mountain') {
+                // 2x longer: Switchbacks and mountain sweepers
+                return [
+                    // Climb with sweeping curves
+                    { start: 0.04, end: 0.12, rate: 0.08 },   // Wide right bend
+                    // First switchback
+                    { start: 0.16, end: 0.23, rate: -0.42 },  // Hairpin left
+                    // Sweeping descent
+                    { start: 0.28, end: 0.36, rate: 0.06 },   // Wide right
+                    // Second switchback
+                    { start: 0.40, end: 0.47, rate: 0.45 },   // Hairpin right
+                    // Long straight section (0.47-0.52)
+                    // S-curves
+                    { start: 0.53, end: 0.58, rate: -0.10 },  // Medium left
+                    { start: 0.60, end: 0.65, rate: 0.12 },   // Medium right
+                    // Third switchback
+                    { start: 0.70, end: 0.77, rate: -0.40 },  // Hairpin left
+                    // Final sweeping section
+                    { start: 0.82, end: 0.92, rate: 0.05 },   // Long wide right
+                    { start: 0.95, end: 0.98, rate: -0.08 },  // Gentle left to finish
+                ];
+            } else if (layout === 'coastal') {
+                // 2x longer: Flowing coastal road with varying curves
+                return [
+                    // Opening sweeper
+                    { start: 0.03, end: 0.10, rate: 0.09 },   // Wide right
+                    // Tight cove turn
+                    { start: 0.14, end: 0.19, rate: -0.22 },  // Sharp left
+                    // Long coastal sweep
+                    { start: 0.24, end: 0.36, rate: 0.045 },  // Very wide right
+                    // Quick direction changes
+                    { start: 0.40, end: 0.44, rate: -0.18 },  // Medium left
+                    { start: 0.46, end: 0.50, rate: 0.16 },   // Medium right
+                    // Cliffside hairpin
+                    { start: 0.55, end: 0.63, rate: -0.35 },  // Tight hairpin left
+                    // Flowing S-section
+                    { start: 0.68, end: 0.73, rate: 0.10 },   // Medium right
+                    { start: 0.75, end: 0.80, rate: -0.11 },  // Medium left
+                    { start: 0.82, end: 0.87, rate: 0.09 },   // Medium right
+                    // Final approach
+                    { start: 0.92, end: 0.97, rate: -0.07 },  // Gentle left to finish
+                ];
+            } else if (layout === 'championship') {
+                // 2x longer: Ultimate challenge - everything combined
+                return [
+                    // Fast chicane start
+                    { start: 0.03, end: 0.06, rate: 0.32 },   // Sharp right
+                    { start: 0.07, end: 0.10, rate: -0.35 },  // Sharp left
+                    // Sweeping right
+                    { start: 0.14, end: 0.22, rate: 0.07 },   // Wide right
+                    // Double hairpin
+                    { start: 0.26, end: 0.32, rate: -0.48 },  // Tight hairpin left
+                    { start: 0.36, end: 0.42, rate: 0.46 },   // Tight hairpin right
+                    // Long straight (0.42-0.48)
+                    // Technical section
+                    { start: 0.49, end: 0.52, rate: -0.25 },  // Quick left
+                    { start: 0.53, end: 0.57, rate: 0.20 },   // Medium right
+                    { start: 0.58, end: 0.61, rate: -0.28 },  // Quick left
+                    // Sweeping esses
+                    { start: 0.65, end: 0.71, rate: 0.08 },   // Wide right
+                    { start: 0.73, end: 0.79, rate: -0.09 },  // Wide left
+                    // Final hairpin
+                    { start: 0.84, end: 0.91, rate: 0.40 },   // Hairpin right
+                    // Sprint to finish
+                    { start: 0.95, end: 0.98, rate: -0.12 },  // Medium left
+                ];
             }
             return [];
+        }
+
+        // Tracks that are 2x longer
+        const LONG_TRACKS = ['grandprix', 'mountain', 'coastal', 'championship'];
+
+        function getTrackLength(layout) {
+            return LONG_TRACKS.includes(layout) ? 3200 : 1600;
         }
 
         function generatePreviewWaypoints(layout) {
             const waypoints = [];
             const segmentLength = 25;
-            const numSegments = Math.ceil(1600 / segmentLength); // Use medium track length
+            const trackLen = getTrackLength(layout);
+            const numSegments = Math.ceil(trackLen / segmentLength);
             let x = 0, z = 0, angle = 0;
             const curves = getTrackCurves(layout);
 
@@ -911,7 +1009,7 @@
         }
 
         function drawAllTrackPreviews() {
-            const layouts = ['classic', 'serpentine', 'zigzag', 'spiral', 'hairpin', 'insane'];
+            const layouts = ['classic', 'serpentine', 'zigzag', 'spiral', 'hairpin', 'insane', 'grandprix', 'mountain', 'coastal', 'championship'];
             layouts.forEach(layout => {
                 drawTrackPreview(layout, 'preview-' + layout);
             });
@@ -931,8 +1029,6 @@
             if (isMobile) {
                 document.getElementById('touch-controls').style.display = 'block';
             }
-
-            TRACK_LENGTH = TRACK_LENGTHS[gameSettings.trackLength];
 
             if (gameInitialized) {
                 cleanupGame();
@@ -1080,12 +1176,12 @@
 
         function generateTrackWaypoints() {
             trackWaypoints = [];
+            const layout = gameSettings.trackLayout;
             // Use smaller segments for smoother curves
             const segmentLength = 25;
-            const numSegments = Math.ceil(TRACK_LENGTH / segmentLength);
+            const trackLen = getTrackLength(layout);
+            const numSegments = Math.ceil(trackLen / segmentLength);
             let x = 0, z = 0, angle = 0;
-
-            const layout = gameSettings.trackLayout;
 
             // Helper: get turn rate based on progress through track
             function getTurnRate(progress, curves) {
@@ -1097,79 +1193,8 @@
                 return 0;
             }
 
-            // Define curves: {start, end, rate} - rate is radians per segment
-            // For reference: 90° = 1.57 rad, 180° = 3.14 rad
-            let curves = [];
-
-            if (layout === 'classic') {
-                curves = [
-                    { start: 0.12, end: 0.22, rate: 0.06 },   // ~60° right
-                    { start: 0.32, end: 0.42, rate: -0.07 },  // ~70° left
-                    { start: 0.55, end: 0.65, rate: 0.06 },   // ~60° right
-                    { start: 0.75, end: 0.85, rate: -0.06 },  // ~60° left
-                ];
-            }
-            else if (layout === 'serpentine') {
-                curves = [
-                    { start: 0.06, end: 0.13, rate: 0.12 },   // ~90° right
-                    { start: 0.17, end: 0.24, rate: -0.14 },  // ~100° left
-                    { start: 0.28, end: 0.35, rate: 0.13 },   // ~90° right
-                    { start: 0.40, end: 0.47, rate: -0.14 },  // ~100° left
-                    { start: 0.52, end: 0.59, rate: 0.12 },   // ~90° right
-                    { start: 0.64, end: 0.71, rate: -0.13 },  // ~90° left
-                    { start: 0.76, end: 0.83, rate: 0.12 },   // ~90° right
-                    { start: 0.88, end: 0.94, rate: -0.10 },  // ~60° left
-                ];
-            }
-            else if (layout === 'zigzag') {
-                // Sharp 90°+ turns
-                curves = [
-                    { start: 0.08, end: 0.14, rate: 0.22 },   // ~120° right
-                    { start: 0.20, end: 0.26, rate: -0.24 },  // ~130° left
-                    { start: 0.32, end: 0.38, rate: 0.22 },   // ~120° right
-                    { start: 0.44, end: 0.50, rate: -0.24 },  // ~130° left
-                    { start: 0.56, end: 0.62, rate: 0.22 },   // ~120° right
-                    { start: 0.68, end: 0.74, rate: -0.24 },  // ~130° left
-                    { start: 0.80, end: 0.86, rate: 0.22 },   // ~120° right
-                    { start: 0.91, end: 0.96, rate: -0.18 },  // ~90° left
-                ];
-            }
-            else if (layout === 'spiral') {
-                curves = [
-                    { start: 0.05, end: 0.45, rate: 0.08 },   // Long spiral right
-                    { start: 0.50, end: 0.55, rate: -0.15 },  // Quick transition
-                    { start: 0.60, end: 0.95, rate: -0.07 },  // Long spiral left
-                ];
-            }
-            else if (layout === 'hairpin') {
-                // TRUE hairpin turns - 180° (π radians) each
-                // With segmentLength=25 and ~64 segments for medium track
-                // 10% of track = ~6.4 segments, need rate ~0.5 for 180°
-                curves = [
-                    { start: 0.12, end: 0.22, rate: 0.45 },   // ~180° hairpin right
-                    { start: 0.32, end: 0.42, rate: -0.45 },  // ~180° hairpin left
-                    { start: 0.52, end: 0.62, rate: 0.45 },   // ~180° hairpin right
-                    { start: 0.72, end: 0.82, rate: -0.45 },  // ~180° hairpin left
-                    { start: 0.90, end: 0.96, rate: 0.25 },   // Final curve
-                ];
-            }
-            else if (layout === 'insane') {
-                // Continuous very tight turns - almost no straights
-                curves = [
-                    { start: 0.02, end: 0.09, rate: 0.35 },
-                    { start: 0.10, end: 0.17, rate: -0.40 },
-                    { start: 0.18, end: 0.25, rate: 0.38 },
-                    { start: 0.26, end: 0.33, rate: -0.42 },
-                    { start: 0.34, end: 0.41, rate: 0.40 },
-                    { start: 0.42, end: 0.49, rate: -0.38 },
-                    { start: 0.50, end: 0.57, rate: 0.42 },
-                    { start: 0.58, end: 0.65, rate: -0.40 },
-                    { start: 0.66, end: 0.73, rate: 0.38 },
-                    { start: 0.74, end: 0.81, rate: -0.42 },
-                    { start: 0.82, end: 0.89, rate: 0.35 },
-                    { start: 0.90, end: 0.97, rate: -0.30 },
-                ];
-            }
+            // Get curves from centralized function
+            const curves = getTrackCurves(layout);
 
             for (let i = 0; i <= numSegments; i++) {
                 trackWaypoints.push({ x, z, angle });
@@ -1728,16 +1753,17 @@
                 obstacleMesh.castShadow = true;
                 scene.add(obstacleMesh);
 
-                const isMoving = gameSettings.difficulty === 'hard' && Math.random() > 0.5;
+                // In hard mode, every other obstacle moves (ensures exactly half move)
+                const isMoving = gameSettings.difficulty === 'hard' && (index % 2 === 0);
 
                 obstacles.push({
                     mesh: obstacleMesh,
                     radius: radius,
                     isMoving: isMoving,
-                    moveSpeed: 0.02 + Math.random() * 0.03,
+                    moveSpeed: 0.03 + Math.random() * 0.04,  // Faster movement
                     moveDirection: Math.random() > 0.5 ? 1 : -1,
                     originalX: pos.x,
-                    moveRange: 5 + Math.random() * 5
+                    moveRange: 8 + Math.random() * 6  // Larger movement range
                 });
             });
         }

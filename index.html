@@ -176,6 +176,15 @@
             transform: translateY(-5px);
             box-shadow: 0 12px 30px rgba(108,92,231,0.6);
         }
+        .multiplayer-btn {
+            background: linear-gradient(45deg, #0984e3, #74b9ff);
+            color: white;
+            box-shadow: 0 8px 20px rgba(9,132,227,0.4);
+        }
+        .multiplayer-btn:hover, .multiplayer-btn:active {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(9,132,227,0.6);
+        }
         .menu-footer {
             margin-top: 25px;
             text-align: center;
@@ -287,6 +296,112 @@
             height: 100%;
             background: rgba(0,0,0,0.7);
             z-index: 199;
+        }
+
+        /* Multiplayer Lobby */
+        #multiplayer-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 199;
+        }
+        #multiplayer-lobby {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 30, 50, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            z-index: 200;
+            width: 90%;
+            max-width: 400px;
+            color: white;
+            text-align: center;
+        }
+        #multiplayer-lobby h2 {
+            margin-bottom: 20px;
+            font-size: 28px;
+            color: #feca57;
+        }
+        .mp-section p {
+            margin: 10px 0;
+            color: #ccc;
+        }
+        .mp-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .mp-btn {
+            padding: 15px 30px;
+            font-size: 18px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .mp-btn.host-btn {
+            background: linear-gradient(135deg, #00b894, #00cec9);
+            color: white;
+        }
+        .mp-btn.join-btn {
+            background: linear-gradient(135deg, #0984e3, #74b9ff);
+            color: white;
+        }
+        .mp-btn.start-btn {
+            background: linear-gradient(135deg, #fdcb6e, #f39c12);
+            color: #333;
+            font-weight: bold;
+        }
+        .mp-btn.cancel-btn {
+            background: #555;
+            color: white;
+        }
+        .mp-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+        #room-code {
+            font-size: 48px;
+            font-weight: bold;
+            letter-spacing: 10px;
+            color: #feca57;
+            margin: 20px 0;
+            font-family: monospace;
+        }
+        #join-code-input {
+            font-size: 32px;
+            padding: 10px 20px;
+            text-align: center;
+            letter-spacing: 8px;
+            width: 200px;
+            border: 3px solid #feca57;
+            border-radius: 10px;
+            background: #2d2d44;
+            color: white;
+            text-transform: uppercase;
+        }
+        #join-code-input::placeholder {
+            letter-spacing: 2px;
+            font-size: 16px;
+        }
+        .mp-status {
+            font-size: 14px;
+            color: #aaa;
+            margin-top: 15px;
+        }
+        .mp-connected-msg {
+            font-size: 20px;
+            color: #00b894 !important;
+            font-weight: bold;
         }
 
         /* Game UI */
@@ -569,7 +684,8 @@
             </div>
         </div>
         <div class="menu-buttons">
-            <button class="menu-btn play-btn" onclick="startGame()">Play</button>
+            <button class="menu-btn play-btn" onclick="startGame()">Play Solo</button>
+            <button class="menu-btn multiplayer-btn" onclick="openMultiplayerLobby()">Multiplayer</button>
             <button class="menu-btn settings-btn" onclick="openSettings()">Settings</button>
         </div>
         <div class="menu-footer">
@@ -621,6 +737,46 @@
         <button class="close-settings" onclick="closeSettings()">Save & Close</button>
     </div>
 
+    <!-- Multiplayer Lobby -->
+    <div id="multiplayer-overlay" onclick="closeMultiplayerLobby()"></div>
+    <div id="multiplayer-lobby">
+        <h2>Multiplayer</h2>
+
+        <div id="mp-initial" class="mp-section">
+            <p>Race against a friend on the same network!</p>
+            <div class="mp-buttons">
+                <button class="mp-btn host-btn" onclick="hostGame()">Host Game</button>
+                <button class="mp-btn join-btn" onclick="showJoinInput()">Join Game</button>
+            </div>
+        </div>
+
+        <div id="mp-hosting" class="mp-section" style="display: none;">
+            <p>Share this code with your friend:</p>
+            <div id="room-code">----</div>
+            <p class="mp-status" id="host-status">Waiting for player to join...</p>
+            <button class="mp-btn cancel-btn" onclick="cancelMultiplayer()">Cancel</button>
+        </div>
+
+        <div id="mp-joining" class="mp-section" style="display: none;">
+            <p>Enter the room code:</p>
+            <input type="text" id="join-code-input" placeholder="Enter code" maxlength="6" />
+            <div class="mp-buttons">
+                <button class="mp-btn join-btn" onclick="joinGame()">Join</button>
+                <button class="mp-btn cancel-btn" onclick="cancelMultiplayer()">Cancel</button>
+            </div>
+            <p class="mp-status" id="join-status"></p>
+        </div>
+
+        <div id="mp-connected" class="mp-section" style="display: none;">
+            <p class="mp-connected-msg">Connected! Ready to race!</p>
+            <p id="opponent-name">Opponent connected</p>
+            <button class="mp-btn start-btn" onclick="startMultiplayerGame()">Start Race</button>
+            <button class="mp-btn cancel-btn" onclick="cancelMultiplayer()">Leave</button>
+        </div>
+
+        <button class="close-settings" onclick="closeMultiplayerLobby()">Close</button>
+    </div>
+
     <!-- Game Container -->
     <div id="game-container"></div>
     <div id="ui">
@@ -656,6 +812,7 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script>
         // Game Settings
         let gameSettings = {
@@ -892,6 +1049,294 @@
         function closeSettings() {
             document.getElementById('settings-panel').style.display = 'none';
             document.getElementById('settings-overlay').style.display = 'none';
+        }
+
+        // ============== MULTIPLAYER ==============
+        let peer = null;
+        let conn = null;
+        let isHost = false;
+        let multiplayerActive = false;
+        let opponentCar = null;
+        let opponentData = { x: 0, z: 0, rotation: 0, progress: 0 };
+        let opponentFinishTime = null;
+
+        function generateRoomCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = '';
+            for (let i = 0; i < 4; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+
+        function openMultiplayerLobby() {
+            document.getElementById('multiplayer-lobby').style.display = 'block';
+            document.getElementById('multiplayer-overlay').style.display = 'block';
+            // Reset to initial state
+            document.getElementById('mp-initial').style.display = 'block';
+            document.getElementById('mp-hosting').style.display = 'none';
+            document.getElementById('mp-joining').style.display = 'none';
+            document.getElementById('mp-connected').style.display = 'none';
+        }
+
+        function closeMultiplayerLobby() {
+            document.getElementById('multiplayer-lobby').style.display = 'none';
+            document.getElementById('multiplayer-overlay').style.display = 'none';
+            // Clean up peer if not connected
+            if (peer && !conn) {
+                peer.destroy();
+                peer = null;
+            }
+        }
+
+        function hostGame() {
+            const roomCode = generateRoomCode();
+            document.getElementById('room-code').textContent = roomCode;
+            document.getElementById('host-status').textContent = 'Waiting for player to join...';
+
+            document.getElementById('mp-initial').style.display = 'none';
+            document.getElementById('mp-hosting').style.display = 'block';
+
+            // Create peer with room code as ID
+            peer = new Peer('rapid-racing-' + roomCode);
+            isHost = true;
+
+            peer.on('open', function(id) {
+                console.log('Host peer ready with ID:', id);
+            });
+
+            peer.on('connection', function(connection) {
+                conn = connection;
+                console.log('Player connected!');
+                document.getElementById('host-status').textContent = 'Player connected!';
+
+                setupConnection();
+
+                // Show connected state
+                setTimeout(() => {
+                    document.getElementById('mp-hosting').style.display = 'none';
+                    document.getElementById('mp-connected').style.display = 'block';
+                }, 500);
+            });
+
+            peer.on('error', function(err) {
+                console.error('Peer error:', err);
+                document.getElementById('host-status').textContent = 'Error: ' + err.type;
+            });
+        }
+
+        function showJoinInput() {
+            document.getElementById('mp-initial').style.display = 'none';
+            document.getElementById('mp-joining').style.display = 'block';
+            document.getElementById('join-code-input').value = '';
+            document.getElementById('join-code-input').focus();
+        }
+
+        function joinGame() {
+            const code = document.getElementById('join-code-input').value.toUpperCase().trim();
+            if (code.length !== 4) {
+                document.getElementById('join-status').textContent = 'Please enter a 4-character code';
+                return;
+            }
+
+            document.getElementById('join-status').textContent = 'Connecting...';
+
+            // Create peer for joining
+            peer = new Peer();
+            isHost = false;
+
+            peer.on('open', function(id) {
+                console.log('Join peer ready with ID:', id);
+                // Connect to host
+                conn = peer.connect('rapid-racing-' + code);
+
+                conn.on('open', function() {
+                    console.log('Connected to host!');
+                    setupConnection();
+
+                    document.getElementById('mp-joining').style.display = 'none';
+                    document.getElementById('mp-connected').style.display = 'block';
+                });
+
+                conn.on('error', function(err) {
+                    console.error('Connection error:', err);
+                    document.getElementById('join-status').textContent = 'Could not connect. Check the code.';
+                });
+            });
+
+            peer.on('error', function(err) {
+                console.error('Peer error:', err);
+                if (err.type === 'peer-unavailable') {
+                    document.getElementById('join-status').textContent = 'Room not found. Check the code.';
+                } else {
+                    document.getElementById('join-status').textContent = 'Error: ' + err.type;
+                }
+            });
+        }
+
+        function setupConnection() {
+            multiplayerActive = true;
+
+            conn.on('data', function(data) {
+                if (data.type === 'position') {
+                    opponentData = data;
+                    updateOpponentCar();
+                } else if (data.type === 'start') {
+                    // Other player started the game
+                    if (!gameStarted) {
+                        startMultiplayerRace();
+                    }
+                } else if (data.type === 'finish') {
+                    // Opponent finished
+                    showOpponentFinished(data.time);
+                }
+            });
+
+            conn.on('close', function() {
+                console.log('Connection closed');
+                multiplayerActive = false;
+                if (gameStarted && !gameFinished) {
+                    const msg = document.getElementById('message');
+                    msg.innerHTML = '<span style="color: #ff6b6b;">Opponent disconnected!</span>';
+                    msg.style.display = 'block';
+                    setTimeout(() => {
+                        if (!gameFinished) msg.style.display = 'none';
+                    }, 3000);
+                }
+            });
+        }
+
+        function cancelMultiplayer() {
+            if (conn) {
+                conn.close();
+                conn = null;
+            }
+            if (peer) {
+                peer.destroy();
+                peer = null;
+            }
+            multiplayerActive = false;
+            isHost = false;
+            closeMultiplayerLobby();
+        }
+
+        function startMultiplayerGame() {
+            // Send start signal to opponent
+            if (conn && conn.open) {
+                conn.send({ type: 'start' });
+            }
+            startMultiplayerRace();
+        }
+
+        function startMultiplayerRace() {
+            closeMultiplayerLobby();
+            startGame();
+            createOpponentCar();
+        }
+
+        function createOpponentCar() {
+            // Create a ghost-like opponent car
+            const opponentGroup = new THREE.Group();
+
+            // Semi-transparent body
+            const bodyGeometry = new THREE.BoxGeometry(2, 0.8, 4);
+            const bodyMaterial = new THREE.MeshPhongMaterial({
+                color: 0x00ffff,
+                transparent: true,
+                opacity: 0.6
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.4;
+            opponentGroup.add(body);
+
+            // Cabin
+            const cabinGeometry = new THREE.BoxGeometry(1.6, 0.6, 2);
+            const cabinMaterial = new THREE.MeshPhongMaterial({
+                color: 0x00aaaa,
+                transparent: true,
+                opacity: 0.5
+            });
+            const cabin = new THREE.Mesh(cabinGeometry, cabinMaterial);
+            cabin.position.set(0, 0.9, -0.3);
+            opponentGroup.add(cabin);
+
+            // Wheels
+            const wheelGeometry = new THREE.CylinderGeometry(0.35, 0.35, 0.3, 16);
+            const wheelMaterial = new THREE.MeshPhongMaterial({
+                color: 0x333333,
+                transparent: true,
+                opacity: 0.7
+            });
+            const wheelPositions = [
+                [-0.9, 0.35, 1.2], [0.9, 0.35, 1.2],
+                [-0.9, 0.35, -1.2], [0.9, 0.35, -1.2]
+            ];
+            wheelPositions.forEach(pos => {
+                const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                wheel.rotation.z = Math.PI / 2;
+                wheel.position.set(pos[0], pos[1], pos[2]);
+                opponentGroup.add(wheel);
+            });
+
+            opponentCar = opponentGroup;
+            scene.add(opponentCar);
+        }
+
+        function updateOpponentCar() {
+            if (opponentCar && opponentData) {
+                opponentCar.position.x = opponentData.x;
+                opponentCar.position.z = opponentData.z;
+                opponentCar.position.y = opponentData.y || 1;
+                opponentCar.rotation.y = opponentData.rotation;
+            }
+        }
+
+        function sendPositionUpdate() {
+            if (conn && conn.open && multiplayerActive && gameStarted && !gameFinished) {
+                conn.send({
+                    type: 'position',
+                    x: car.position.x,
+                    z: car.position.z,
+                    y: car.position.y,
+                    rotation: car.rotation,
+                    progress: car.progress
+                });
+            }
+        }
+
+        function showOpponentFinished(time) {
+            opponentFinishTime = time;
+            const opponentTimeStr = time.toFixed(2);
+
+            if (gameFinished) {
+                // We already finished, update the message with final results
+                const msg = document.getElementById('message');
+                const restartHint = isMobile ? 'Tap ↺ to restart' : 'Press SPACE to restart';
+                let resultText = `FINISH!<br>Your Time: ${gameTime.toFixed(2)}s`;
+
+                if (gameTime < opponentFinishTime) {
+                    resultText += `<br><span style="color: #ffd700; font-size: 36px;">YOU WIN!</span>`;
+                } else if (gameTime > opponentFinishTime) {
+                    resultText += `<br><span style="color: #ff6b6b; font-size: 28px;">Opponent wins!</span>`;
+                } else {
+                    resultText += `<br><span style="color: #feca57; font-size: 28px;">It's a TIE!</span>`;
+                }
+                resultText += `<br><span style="font-size: 20px;">Opponent: ${opponentTimeStr}s</span>`;
+                resultText += `<br><span style="font-size: 24px">${restartHint}</span>`;
+
+                msg.innerHTML = resultText;
+            } else {
+                // Show brief message that opponent finished (we're still racing)
+                const msg = document.getElementById('message');
+                msg.innerHTML = `<span style="color: #00ffff;">Opponent finished: ${opponentTimeStr}s</span>`;
+                msg.style.display = 'block';
+                msg.style.fontSize = '28px';
+                setTimeout(() => {
+                    if (!gameFinished) {
+                        msg.style.display = 'none';
+                    }
+                }, 3000);
+            }
         }
 
         function selectTrack(track) {
@@ -1220,6 +1665,15 @@
                 cancelAnimationFrame(animationId);
             }
             stopAllSounds();
+
+            // Clean up multiplayer
+            if (opponentCar && scene) {
+                scene.remove(opponentCar);
+                opponentCar = null;
+            }
+            opponentFinishTime = null;
+            // Keep connection alive if still connected
+
             document.getElementById('game-container').style.display = 'none';
             document.getElementById('ui').style.display = 'none';
             document.getElementById('health-container').style.display = 'none';
@@ -3028,9 +3482,33 @@
 
         function finishGame() {
             gameFinished = true;
+
+            // Send finish event to opponent
+            if (multiplayerActive && conn && conn.open) {
+                conn.send({ type: 'finish', time: gameTime });
+            }
+
             const message = document.getElementById('message');
             const restartHint = isMobile ? 'Tap ↺ to restart' : 'Press SPACE to restart';
-            message.innerHTML = `FINISH!<br>Time: ${gameTime.toFixed(2)}s<br><span style="font-size: 24px">${restartHint}</span>`;
+
+            // Show multiplayer results if applicable
+            let resultText = `FINISH!<br>Your Time: ${gameTime.toFixed(2)}s`;
+            if (multiplayerActive && opponentFinishTime !== null) {
+                if (gameTime < opponentFinishTime) {
+                    resultText += `<br><span style="color: #ffd700; font-size: 36px;">YOU WIN!</span>`;
+                    resultText += `<br><span style="font-size: 20px;">Opponent: ${opponentFinishTime.toFixed(2)}s</span>`;
+                } else if (gameTime > opponentFinishTime) {
+                    resultText += `<br><span style="color: #ff6b6b; font-size: 28px;">Opponent wins!</span>`;
+                    resultText += `<br><span style="font-size: 20px;">Opponent: ${opponentFinishTime.toFixed(2)}s</span>`;
+                } else {
+                    resultText += `<br><span style="color: #feca57; font-size: 28px;">It's a TIE!</span>`;
+                }
+            } else if (multiplayerActive) {
+                resultText += `<br><span style="font-size: 20px; color: #00ffff;">Waiting for opponent...</span>`;
+            }
+            resultText += `<br><span style="font-size: 24px">${restartHint}</span>`;
+
+            message.innerHTML = resultText;
             message.style.display = 'block';
             message.style.color = '#00ff00';
         }
@@ -3053,6 +3531,13 @@
             gameOver = false;
             health = MAX_HEALTH;
             updateHealthBar();
+
+            // Reset multiplayer state for new race
+            opponentFinishTime = null;
+            if (opponentCar) {
+                opponentCar.position.set(0, 1, 2); // Slightly behind player
+                opponentCar.rotation.y = 0;
+            }
 
             car.mesh.position.copy(car.position);
             car.mesh.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation);
@@ -3227,6 +3712,14 @@
             updateCar(delta);
             updateUI();
             drawMinimap();
+
+            // Send multiplayer position updates (throttled to ~20 times/sec)
+            if (multiplayerActive && gameStarted && !gameFinished) {
+                if (!window.lastPositionUpdate || currentTime - window.lastPositionUpdate > 50) {
+                    sendPositionUpdate();
+                    window.lastPositionUpdate = currentTime;
+                }
+            }
 
             // Update sounds based on car state
             if (gameStarted && !gameFinished && !gameOver) {

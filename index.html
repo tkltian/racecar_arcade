@@ -2380,7 +2380,8 @@
             gameOver = true;
             gameFinished = true;
             const message = document.getElementById('message');
-            message.innerHTML = `WASTED!<br><span style="font-size: 24px; color: #ff6b6b;">Landed off the track!</span><br><span style="font-size: 20px;">Press SPACE to try again</span>`;
+            const restartHint = isMobile ? 'Tap ↺ to try again' : 'Press SPACE to try again';
+            message.innerHTML = `WASTED!<br><span style="font-size: 24px; color: #ff6b6b;">Landed off the track!</span><br><span style="font-size: 20px;">${restartHint}</span>`;
             message.style.display = 'block';
             message.style.color = '#ff0000';
         }
@@ -2647,7 +2648,8 @@
             gameOver = true;
             gameFinished = true;
             const message = document.getElementById('message');
-            message.innerHTML = `WASTED!<br><span style="font-size: 24px; color: #ff6b6b;">Your car is destroyed!</span><br><span style="font-size: 20px;">Press SPACE to try again</span>`;
+            const restartHint = isMobile ? 'Tap ↺ to try again' : 'Press SPACE to try again';
+            message.innerHTML = `WASTED!<br><span style="font-size: 24px; color: #ff6b6b;">Your car is destroyed!</span><br><span style="font-size: 20px;">${restartHint}</span>`;
             message.style.display = 'block';
             message.style.color = '#ff0000';
         }
@@ -2655,7 +2657,8 @@
         function finishGame() {
             gameFinished = true;
             const message = document.getElementById('message');
-            message.innerHTML = `FINISH!<br>Time: ${gameTime.toFixed(2)}s<br><span style="font-size: 24px">Press SPACE to restart</span>`;
+            const restartHint = isMobile ? 'Tap ↺ to restart' : 'Press SPACE to restart';
+            message.innerHTML = `FINISH!<br>Time: ${gameTime.toFixed(2)}s<br><span style="font-size: 24px">${restartHint}</span>`;
             message.style.display = 'block';
             message.style.color = '#00ff00';
         }

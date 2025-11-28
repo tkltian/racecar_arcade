@@ -838,27 +838,28 @@
                     { start: 0.93, end: 0.97, rate: -0.15 },  // Medium left to finish
                 ];
             } else if (layout === 'mountain') {
-                // 2x longer: Mountain pass - varied turns without self-intersection
-                // Each turn kept under 60° to prevent track crossing
+                // 2x longer: Mountain switchback road with U-turns
+                // Designed like real mountain roads - each switchback is offset so track doesn't cross
                 return [
-                    // Gentle sweeper right
-                    { start: 0.04, end: 0.12, rate: 0.06 },   // ~50° right sweeper
-                    // Sharp left
-                    { start: 0.16, end: 0.21, rate: -0.16 },  // ~50° sharp left
-                    // Medium right with straight after
-                    { start: 0.26, end: 0.33, rate: 0.12 },   // ~55° right
-                    // Long sweeper left
-                    { start: 0.38, end: 0.48, rate: -0.05 },  // ~32° gentle left sweeper
-                    // Sharp right
-                    { start: 0.52, end: 0.57, rate: 0.15 },   // ~48° sharp right
-                    // Medium left
-                    { start: 0.62, end: 0.68, rate: -0.11 },  // ~42° left
-                    // Long sweeper right
-                    { start: 0.73, end: 0.83, rate: 0.055 },  // ~35° gentle right sweeper
-                    // Sharp left
-                    { start: 0.87, end: 0.92, rate: -0.13 },  // ~42° sharp left
-                    // Final gentle right to finish
-                    { start: 0.95, end: 0.99, rate: 0.06 },   // ~15° right to finish
+                    // Start with gentle right to set up the pattern
+                    { start: 0.02, end: 0.06, rate: 0.08 },   // ~25° setup right
+                    // First U-turn right (~160°) - switchback #1
+                    { start: 0.09, end: 0.19, rate: 0.25 },   // ~160° U-turn right
+                    // Straight section heading back (offset from start)
+                    // Sharp left to add variety
+                    { start: 0.24, end: 0.28, rate: -0.18 },  // ~46° sharp left
+                    // Second U-turn left (~155°) - switchback #2
+                    { start: 0.32, end: 0.42, rate: -0.24 },  // ~155° U-turn left
+                    // Sweeping section
+                    { start: 0.47, end: 0.53, rate: 0.07 },   // ~27° gentle sweeper right
+                    // Third U-turn right (~150°) - switchback #3
+                    { start: 0.57, end: 0.67, rate: 0.23 },   // ~150° U-turn right
+                    // Sharp left for variety
+                    { start: 0.71, end: 0.75, rate: -0.20 },  // ~51° sharp left
+                    // Fourth U-turn left (~140°) - final switchback
+                    { start: 0.79, end: 0.88, rate: -0.22 },  // ~140° U-turn left
+                    // Exit sweeper to finish
+                    { start: 0.92, end: 0.98, rate: 0.10 },   // ~38° gentle right to finish
                 ];
             } else if (layout === 'coastal') {
                 // 2x longer: Flowing coastal road with varying curves
@@ -1184,6 +1185,38 @@
         let smoothTrackPoints = []; // Smooth spline points for collision and minimap
         let carTrackIndex = 0; // Track car's progress along the track (segment index)
 
+        // Check if two line segments intersect
+        function segmentsIntersect(p1, p2, p3, p4) {
+            const d1 = direction(p3, p4, p1);
+            const d2 = direction(p3, p4, p2);
+            const d3 = direction(p1, p2, p3);
+            const d4 = direction(p1, p2, p4);
+
+            if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+                ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
+                return true;
+            }
+            return false;
+        }
+
+        function direction(p1, p2, p3) {
+            return (p3.x - p1.x) * (p2.z - p1.z) - (p2.x - p1.x) * (p3.z - p1.z);
+        }
+
+        // Check if track self-intersects (skip adjacent segments)
+        function checkTrackIntersection(waypoints) {
+            const minGap = 15; // Minimum segment gap to check (skip nearby segments)
+            for (let i = 0; i < waypoints.length - 1; i++) {
+                for (let j = i + minGap; j < waypoints.length - 1; j++) {
+                    if (segmentsIntersect(waypoints[i], waypoints[i+1], waypoints[j], waypoints[j+1])) {
+                        console.warn(`Track self-intersection detected between segments ${i} and ${j}`);
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         function generateTrackWaypoints() {
             trackWaypoints = [];
             const layout = gameSettings.trackLayout;
@@ -1216,6 +1249,11 @@
                 // Move forward in current direction
                 x += Math.sin(angle) * segmentLength;
                 z -= Math.cos(angle) * segmentLength;
+            }
+
+            // Validate track doesn't self-intersect
+            if (checkTrackIntersection(trackWaypoints)) {
+                console.error(`Track layout "${layout}" has self-intersection! Please fix the track design.`);
             }
 
             return trackWaypoints;

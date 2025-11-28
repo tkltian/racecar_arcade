@@ -40,9 +40,9 @@
             touch-action: auto;
         }
         #home-page h1 {
-            font-size: clamp(36px, 10vw, 72px);
-            text-shadow: 4px 4px 8px rgba(0,0,0,0.5), 0 0 40px rgba(255,200,0,0.3);
-            margin-bottom: 20px;
+            font-size: clamp(28px, 8vw, 52px);
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5), 0 0 30px rgba(255,200,0,0.3);
+            margin-bottom: 10px;
             background: linear-gradient(45deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -50,18 +50,18 @@
             text-align: center;
         }
         #home-page .subtitle {
-            font-size: clamp(14px, 4vw, 24px);
+            font-size: clamp(11px, 3vw, 16px);
             color: #aaa;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
             text-align: center;
-            max-width: 600px;
-            line-height: 1.5;
+            max-width: 500px;
+            line-height: 1.4;
         }
         .track-picker {
-            margin-bottom: 30px;
+            margin-bottom: 15px;
         }
         .track-picker-label {
-            font-size: clamp(16px, 4vw, 20px);
+            font-size: clamp(14px, 3vw, 16px);
             color: #feca57;
             margin-bottom: 15px;
             text-transform: uppercase;
@@ -69,20 +69,20 @@
         }
         .track-options {
             display: flex;
-            gap: 15px;
+            gap: 8px;
             flex-wrap: wrap;
             justify-content: center;
         }
         .track-option {
-            padding: 15px 20px;
+            padding: 8px 10px;
             background: rgba(45, 45, 68, 0.8);
-            border: 3px solid #444;
-            border-radius: 15px;
+            border: 2px solid #444;
+            border-radius: 10px;
             cursor: pointer;
             transition: all 0.3s;
             color: white;
-            font-size: clamp(14px, 3vw, 16px);
-            min-width: 100px;
+            font-size: 12px;
+            min-width: 70px;
             text-align: center;
         }
         .track-option:hover {
@@ -99,14 +99,14 @@
             margin-bottom: 5px;
         }
         .track-preview {
-            width: 80px;
-            height: 80px;
+            width: 55px;
+            height: 55px;
             background: rgba(20, 20, 35, 0.9);
-            border-radius: 8px;
-            margin-bottom: 8px;
+            border-radius: 6px;
+            margin-bottom: 5px;
         }
         .track-name {
-            font-size: 12px;
+            font-size: 10px;
             color: #ddd;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -114,6 +114,32 @@
         .track-option.selected .track-name {
             color: white;
             font-weight: bold;
+        }
+        .difficulty-picker {
+            margin-bottom: 20px;
+        }
+        .difficulty-options {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .difficulty-option {
+            padding: 8px 16px;
+            background: rgba(45, 45, 68, 0.8);
+            border: 2px solid #444;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+            font-size: 14px;
+        }
+        .difficulty-option:hover {
+            border-color: #6c5ce7;
+        }
+        .difficulty-option.selected {
+            background: linear-gradient(45deg, #6c5ce7, #a29bfe);
+            border-color: #a29bfe;
         }
         .menu-buttons {
             display: flex;
@@ -151,7 +177,7 @@
             box-shadow: 0 12px 30px rgba(108,92,231,0.6);
         }
         .menu-footer {
-            margin-top: 40px;
+            margin-top: 25px;
             text-align: center;
             color: #888;
             font-size: 12px;
@@ -160,11 +186,12 @@
         .menu-footer .dedication {
             color: #a29bfe;
             font-style: italic;
-            margin-bottom: 10px;
+            font-size: 14px;
+            margin-bottom: 8px;
         }
         .menu-footer .copyright {
             color: #666;
-            font-size: 11px;
+            font-size: 10px;
         }
 
         /* Settings Panel */
@@ -531,6 +558,15 @@
                 </div>
             </div>
         </div>
+        <div class="difficulty-picker">
+            <div class="track-picker-label">Difficulty</div>
+            <div class="difficulty-options">
+                <div class="difficulty-option" data-difficulty="baby" onclick="selectDifficulty('baby')">Baby</div>
+                <div class="difficulty-option" data-difficulty="easy" onclick="selectDifficulty('easy')">Easy</div>
+                <div class="difficulty-option selected" data-difficulty="medium" onclick="selectDifficulty('medium')">Medium</div>
+                <div class="difficulty-option" data-difficulty="hard" onclick="selectDifficulty('hard')">Hard</div>
+            </div>
+        </div>
         <div class="menu-buttons">
             <button class="menu-btn play-btn" onclick="startGame()">Play</button>
             <button class="menu-btn settings-btn" onclick="openSettings()">Settings</button>
@@ -775,6 +811,24 @@
             });
         }
 
+        function selectDifficulty(difficulty) {
+            gameSettings.difficulty = difficulty;
+            // Update menu difficulty options
+            document.querySelectorAll('.difficulty-option').forEach(opt => {
+                opt.classList.remove('selected');
+                if (opt.dataset.difficulty === difficulty) {
+                    opt.classList.add('selected');
+                }
+            });
+            // Also update settings panel if open
+            document.querySelectorAll('.setting-option[data-setting="difficulty"]').forEach(opt => {
+                opt.classList.remove('selected');
+                if (opt.dataset.value === difficulty) {
+                    opt.classList.add('selected');
+                }
+            });
+        }
+
         function getTrackCurves(layout) {
             if (layout === 'classic') {
                 return [
@@ -969,8 +1023,8 @@
             if (!canvas) return;
 
             const ctx = canvas.getContext('2d');
-            const width = canvas.width = 80;
-            const height = canvas.height = 80;
+            const width = canvas.width = 55;
+            const height = canvas.height = 55;
 
             // Generate waypoints for this layout
             const waypoints = generatePreviewWaypoints(layout);
@@ -986,7 +1040,7 @@
             }
 
             // Add padding and calculate scale
-            const padding = 8;
+            const padding = 5;
             const trackWidth = maxX - minX;
             const trackHeight = maxZ - minZ;
             const scaleX = (width - padding * 2) / (trackWidth || 1);
@@ -1003,7 +1057,7 @@
 
             // Draw track
             ctx.strokeStyle = '#666';
-            ctx.lineWidth = 4;
+            ctx.lineWidth = 3;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             ctx.beginPath();
@@ -1786,13 +1840,24 @@
             }
 
             const difficultyMultiplier = { baby: 0.1, easy: 0.6, medium: 1, hard: 1.5 };
-            // Baby mode: max 4 obstacles regardless of track length
+            // Baby mode: max 4 obstacles, evenly spaced throughout track
             let actualCount = Math.floor(obstaclePositions.length * difficultyMultiplier[gameSettings.difficulty]);
             if (gameSettings.difficulty === 'baby') {
                 actualCount = Math.min(actualCount, 4);
             }
 
-            obstaclePositions.slice(0, actualCount).forEach((pos, index) => {
+            // For baby mode, space obstacles evenly throughout track instead of clustering at start
+            let selectedPositions = obstaclePositions.slice(0, actualCount);
+            if (gameSettings.difficulty === 'baby' && obstaclePositions.length > 4) {
+                selectedPositions = [];
+                const spacing = Math.floor(obstaclePositions.length / 4);
+                for (let i = 0; i < 4; i++) {
+                    const idx = Math.min(spacing * i + Math.floor(spacing / 2), obstaclePositions.length - 1);
+                    selectedPositions.push(obstaclePositions[idx]);
+                }
+            }
+
+            selectedPositions.forEach((pos, index) => {
                 // Check if position is on a bounce pad
                 let onPad = false;
                 for (const pad of ramps) {
@@ -2321,8 +2386,10 @@
                 // Check if car is on the bounce pad
                 if (distance < pad.radius && car.position.y < 2) {
                     // Launch the car upward! Height based on speed
+                    // Baby mode: 3x jump height for extra fun!
                     const speedFactor = Math.max(0.3, car.speed / CAR_MAX_SPEED);
-                    car.velocityY = JUMP_VELOCITY * 1.5 * speedFactor;
+                    const jumpMultiplier = gameSettings.difficulty === 'baby' ? 3 : 1;
+                    car.velocityY = JUMP_VELOCITY * 1.5 * speedFactor * jumpMultiplier;
                     car.isJumping = true;
                     car.onRamp = true; // Mark as on pad to prevent collision damage
 

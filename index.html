@@ -2688,6 +2688,17 @@
             car.mesh.position.copy(car.position);
             car.mesh.rotation.y = car.rotation;
 
+            // Tilt car forward when in the air so player can see where they're flying
+            if (car.isJumping || car.position.y > 1.5) {
+                // Tilt based on vertical velocity - more tilt when going up fast
+                const targetPitch = Math.max(-0.4, Math.min(0.2, -car.velocityY * 0.8));
+                // Smooth transition
+                car.mesh.rotation.x = car.mesh.rotation.x * 0.9 + targetPitch * 0.1;
+            } else {
+                // Smoothly return to level when on ground
+                car.mesh.rotation.x *= 0.85;
+            }
+
             const cameraOffset = new THREE.Vector3(0, 1.5, 0.5);
             cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation);
             camera.position.copy(car.position).add(cameraOffset);
@@ -2905,6 +2916,7 @@
             updateHealthBar();
 
             car.mesh.position.copy(car.position);
+            car.mesh.rotation.x = 0;
             car.mesh.rotation.y = car.rotation;
             camera.position.set(0, 2.5, 0.5);
             camera.rotation.y = 0;

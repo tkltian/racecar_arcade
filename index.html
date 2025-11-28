@@ -2702,8 +2702,8 @@
                 car.airTilt *= 0.8;
                 if (Math.abs(car.airTilt) < 0.01) car.airTilt = 0;
             }
-            // Tilt car nose down and camera looking down (negative = look down in Three.js)
-            car.mesh.rotation.x = car.airTilt;
+            // Tilt car nose down and camera looking down
+            car.mesh.rotation.x = -car.airTilt;  // Negative = nose tilts down
 
             const cameraOffset = new THREE.Vector3(0, 1.5, 0.5);
             cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation);

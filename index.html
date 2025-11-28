@@ -3517,13 +3517,25 @@
             message.style.display = 'block';
             message.style.color = '#ffff00';
 
-            // Find a safe respawn position on the track
-            // Use current progress to find nearby track point
+            // Find closest track point to where car currently is (where it landed)
             const points = smoothTrackPoints.length > 0 ? smoothTrackPoints : trackWaypoints;
-            const respawnIndex = Math.max(0, Math.min(carTrackIndex - 5, points.length - 2));
+            let closestIndex = 0;
+            let closestDist = Infinity;
+            for (let i = 0; i < points.length; i++) {
+                const dx = car.position.x - points[i].x;
+                const dz = car.position.z - points[i].z;
+                const dist = dx * dx + dz * dz;
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closestIndex = i;
+                }
+            }
+
+            // Use the closest point, clamped to valid range
+            const respawnIndex = Math.max(0, Math.min(closestIndex, points.length - 2));
             const trackPoint = points[respawnIndex];
 
-            // Reset car state
+            // Reset car state - respawn on the track at closest point
             car.position.x = trackPoint.x;
             car.position.z = trackPoint.z;
             car.position.y = 1;
@@ -3533,10 +3545,10 @@
             car.onRamp = false;
             car.airTilt = 0;
 
-            // Calculate rotation to face track direction
+            // Calculate rotation to face track direction (forward along track flow)
             if (respawnIndex < points.length - 1) {
                 const nextPoint = points[respawnIndex + 1];
-                car.rotation = Math.atan2(nextPoint.x - trackPoint.x, nextPoint.z - trackPoint.z);
+                car.rotation = Math.atan2(nextPoint.x - trackPoint.x, -(nextPoint.z - trackPoint.z));
             }
 
             // Reset health

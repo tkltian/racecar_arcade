@@ -1996,43 +1996,53 @@
             });
 
             // === EARS - Long rabbit-like pointed ears (signature feature) ===
-            // Create elongated ear shape using multiple parts
-            // Outer ear base
-            const earBaseGeometry = new THREE.CapsuleGeometry(0.4, 1.8, 8, 16);
-            const leftEarBase = new THREE.Mesh(earBaseGeometry, bodyMaterial);
+            // Create elongated ear using cylinder (r128 compatible)
+            const earCylinderGeometry = new THREE.CylinderGeometry(0.38, 0.42, 1.8, 12);
+            const leftEarBase = new THREE.Mesh(earCylinderGeometry, bodyMaterial);
             leftEarBase.position.set(-0.9, 4.2, -0.1);
             leftEarBase.rotation.z = 0.3;
             leftEarBase.rotation.x = -0.1;
             labubuGroup.add(leftEarBase);
 
-            const rightEarBase = new THREE.Mesh(earBaseGeometry, bodyMaterial);
+            const rightEarBase = new THREE.Mesh(earCylinderGeometry, bodyMaterial);
             rightEarBase.position.set(0.9, 4.2, -0.1);
             rightEarBase.rotation.z = -0.3;
             rightEarBase.rotation.x = -0.1;
             labubuGroup.add(rightEarBase);
 
+            // Ear rounded bottom caps
+            const earCapGeometry = new THREE.SphereGeometry(0.42, 12, 12);
+            const leftEarCap = new THREE.Mesh(earCapGeometry, bodyMaterial);
+            leftEarCap.position.set(-0.75, 3.35, -0.05);
+            leftEarCap.scale.set(1, 0.6, 1);
+            labubuGroup.add(leftEarCap);
+            const rightEarCap = new THREE.Mesh(earCapGeometry, bodyMaterial);
+            rightEarCap.position.set(0.75, 3.35, -0.05);
+            rightEarCap.scale.set(1, 0.6, 1);
+            labubuGroup.add(rightEarCap);
+
             // Ear tips (pointed)
-            const earTipGeometry = new THREE.ConeGeometry(0.35, 1.0, 8);
+            const earTipGeometry = new THREE.ConeGeometry(0.38, 1.2, 8);
             const leftEarTip = new THREE.Mesh(earTipGeometry, bodyMaterial);
-            leftEarTip.position.set(-1.15, 5.5, -0.15);
+            leftEarTip.position.set(-1.1, 5.4, -0.15);
             leftEarTip.rotation.z = 0.3;
             labubuGroup.add(leftEarTip);
 
             const rightEarTip = new THREE.Mesh(earTipGeometry, bodyMaterial);
-            rightEarTip.position.set(1.15, 5.5, -0.15);
+            rightEarTip.position.set(1.1, 5.4, -0.15);
             rightEarTip.rotation.z = -0.3;
             labubuGroup.add(rightEarTip);
 
-            // Inner ear (gradient/lighter color)
-            const innerEarGeometry = new THREE.CapsuleGeometry(0.22, 1.4, 8, 16);
+            // Inner ear (gradient/lighter color) - using cylinder
+            const innerEarCylinderGeometry = new THREE.CylinderGeometry(0.2, 0.24, 1.4, 12);
             const innerEarMaterial = new THREE.MeshStandardMaterial({ color: labubuColor.gradient, roughness: 0.8 });
-            const leftInnerEar = new THREE.Mesh(innerEarGeometry, innerEarMaterial);
+            const leftInnerEar = new THREE.Mesh(innerEarCylinderGeometry, innerEarMaterial);
             leftInnerEar.position.set(-0.85, 4.15, 0.15);
             leftInnerEar.rotation.z = 0.3;
             leftInnerEar.rotation.x = -0.1;
             labubuGroup.add(leftInnerEar);
 
-            const rightInnerEar = new THREE.Mesh(innerEarGeometry, innerEarMaterial);
+            const rightInnerEar = new THREE.Mesh(innerEarCylinderGeometry, innerEarMaterial);
             rightInnerEar.position.set(0.85, 4.15, 0.15);
             rightInnerEar.rotation.z = -0.3;
             rightInnerEar.rotation.x = -0.1;
@@ -2159,8 +2169,8 @@
             });
 
             // === ARMS - Long fuzzy arms ===
-            // Upper arm
-            const upperArmGeometry = new THREE.CapsuleGeometry(0.28, 0.8, 8, 16);
+            // Upper arm (using cylinder - r128 compatible)
+            const upperArmGeometry = new THREE.CylinderGeometry(0.28, 0.28, 0.8, 12);
             const leftUpperArm = new THREE.Mesh(upperArmGeometry, bodyMaterial);
             leftUpperArm.position.set(-1.6, 0.2, 0.2);
             leftUpperArm.rotation.z = 0.4;
@@ -2196,8 +2206,8 @@
                 }
             });
 
-            // === LEGS - Stubby fuzzy legs ===
-            const legGeometry = new THREE.CapsuleGeometry(0.35, 0.5, 8, 16);
+            // === LEGS - Stubby fuzzy legs (using cylinder - r128 compatible) ===
+            const legGeometry = new THREE.CylinderGeometry(0.35, 0.35, 0.5, 12);
             const leftLeg = new THREE.Mesh(legGeometry, bodyMaterial);
             leftLeg.position.set(-0.7, -1.3, 0);
             labubuGroup.add(leftLeg);

@@ -1303,8 +1303,10 @@
         function setupHostConnection(connection, peerId) {
             multiplayerActive = true;
 
+            let hostReceivedCount = 0;
             connection.on('data', function(data) {
                 if (data.type === 'position') {
+                    if (hostReceivedCount++ < 5) console.log('Host received position from', peerId, 'at', data.x.toFixed(1), data.z.toFixed(1));
                     // Store this player's position
                     if (!opponents[peerId]) {
                         console.log('Host: creating opponent entry for', peerId);
@@ -1359,6 +1361,8 @@
                 if (data.type === 'position') {
                     // Position from another player (relayed by host) or from host
                     const odppId = data.peerId || 'host';
+                    if (!window.joinerReceivedCount) window.joinerReceivedCount = 0;
+                    if (window.joinerReceivedCount++ < 5) console.log('Joiner received position from', odppId, 'at', data.x.toFixed(1), data.z.toFixed(1));
                     if (!opponents[odppId]) {
                         console.log('Joiner: creating opponent entry for', odppId);
                         opponents[odppId] = { data: {}, finishTime: null, car: null };
@@ -1375,9 +1379,12 @@
                     lastHeartbeat = Date.now();
                 } else if (data.type === 'start') {
                     // Host started the game - apply their settings
+                    console.log('Joiner received START message:', data);
+                    console.log('My peer ID:', myPeerId);
+                    console.log('Players in message:', data.players);
                     if (!gameStarted) {
                         if (data.settings) {
-                            console.log('Received host settings:', data.settings);
+                            console.log('Applying host settings:', data.settings);
                             gameSettings.difficulty = data.settings.difficulty;
                             gameSettings.obstacleType = data.settings.obstacleType;
                             gameSettings.trackLayout = data.settings.trackLayout;
@@ -1549,9 +1556,15 @@
             const playerIds = Object.keys(connections);
             playerIds.push(myPeerId); // Include host
 
+            console.log('Host starting game');
+            console.log('My peer ID (host):', myPeerId);
+            console.log('Connected players:', Object.keys(connections));
+            console.log('All player IDs:', playerIds);
+
             // Generate seed for synchronized random (obstacles, etc.)
             const seed = seedFromString(currentRoomCode + gameSettings.trackLayout + Date.now());
             setGameSeed(seed);
+            console.log('Game seed:', seed);
 
             broadcastToAll({
                 type: 'start',
@@ -1672,6 +1685,7 @@
             }
         }
 
+        let positionUpdateCount = 0;
         function sendPositionUpdate() {
             if (!multiplayerActive || !gameStarted || gameFinished) return;
 
@@ -1688,9 +1702,11 @@
             if (isHost) {
                 // Host broadcasts to all players
                 broadcastToAll(posData);
+                if (positionUpdateCount++ < 5) console.log('Host sending position to', Object.keys(connections).length, 'players');
             } else if (conn && conn.open) {
                 // Joiner sends to host
                 conn.send(posData);
+                if (positionUpdateCount++ < 5) console.log('Joiner sending position to host');
             }
         }
 
@@ -2666,7 +2682,9 @@
                 const perpZ = Math.sin(angle);
 
                 // Random offset from center of track
-                const lateralOffset = (Math.random() - 0.5) * (TRACK_WIDTH - 10);
+                // Use seeded random in multiplayer for synchronized bounce pads
+                const randomVal = multiplayerActive ? seededRandom() : Math.random();
+                const lateralOffset = (randomVal - 0.5) * (TRACK_WIDTH - 10);
                 const padX = wp.x + perpX * lateralOffset;
                 const padZ = wp.z + perpZ * lateralOffset;
                 // Baby mode: 2x bigger launch pads for easier hitting
@@ -2871,14 +2889,18 @@
                 // In hard mode, every other obstacle moves (ensures exactly half move)
                 const isMoving = gameSettings.difficulty === 'hard' && (index % 2 === 0);
 
+                // Use seeded random in multiplayer for synchronized moving obstacles
+                const moveRand1 = multiplayerActive ? seededRandom() : Math.random();
+                const moveRand2 = multiplayerActive ? seededRandom() : Math.random();
+                const moveRand3 = multiplayerActive ? seededRandom() : Math.random();
                 obstacles.push({
                     mesh: obstacleMesh,
                     radius: radius,
                     isMoving: isMoving,
-                    moveSpeed: 0.03 + Math.random() * 0.04,  // Faster movement
-                    moveDirection: Math.random() > 0.5 ? 1 : -1,
+                    moveSpeed: 0.03 + moveRand1 * 0.04,  // Faster movement
+                    moveDirection: moveRand2 > 0.5 ? 1 : -1,
                     originalX: pos.x,
-                    moveRange: 8 + Math.random() * 6  // Larger movement range
+                    moveRange: 8 + moveRand3 * 6  // Larger movement range
                 });
             });
         }

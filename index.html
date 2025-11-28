@@ -565,6 +565,7 @@
                 <div class="difficulty-option" data-difficulty="easy" onclick="selectDifficulty('easy')">Easy</div>
                 <div class="difficulty-option selected" data-difficulty="medium" onclick="selectDifficulty('medium')">Medium</div>
                 <div class="difficulty-option" data-difficulty="hard" onclick="selectDifficulty('hard')">Hard</div>
+                <div class="difficulty-option" data-difficulty="space" onclick="selectDifficulty('space')">Space</div>
             </div>
         </div>
         <div class="menu-buttons">
@@ -589,6 +590,7 @@
                 <div class="setting-option" data-setting="difficulty" data-value="easy">Easy</div>
                 <div class="setting-option selected" data-setting="difficulty" data-value="medium">Medium</div>
                 <div class="setting-option" data-setting="difficulty" data-value="hard">Hard</div>
+                <div class="setting-option" data-setting="difficulty" data-value="space">Space</div>
             </div>
         </div>
 
@@ -1932,7 +1934,7 @@
                 });
             }
 
-            const difficultyMultiplier = { baby: 0.1, easy: 0.6, medium: 1, hard: 1.5 };
+            const difficultyMultiplier = { baby: 0.1, easy: 0.6, medium: 1, hard: 1.5, space: 1.5 };
             // Baby mode: max 4 obstacles, evenly spaced throughout track
             let actualCount = Math.floor(obstaclePositions.length * difficultyMultiplier[gameSettings.difficulty]);
             if (gameSettings.difficulty === 'baby') {
@@ -2671,9 +2673,11 @@
 
         function updateCarPhysics() {
             // Apply gravity when jumping
+            // Space mode: 50% gravity for 2x higher jumps and slower landing
             if (car.isJumping || car.position.y > 1.01) {
                 const wasInAir = car.position.y > 1.1;
-                car.velocityY -= GRAVITY;
+                const gravityMultiplier = gameSettings.difficulty === 'space' ? 0.5 : 1;
+                car.velocityY -= GRAVITY * gravityMultiplier;
                 car.position.y += car.velocityY;
 
                 if (car.position.y <= 1) {

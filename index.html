@@ -1928,201 +1928,323 @@
             // Use probability-based color selection (1/36 for Secret black, 35/36 divided by 6 for others)
             const labubuColor = getRandomLabubuColor();
 
-            // Fuzzy/plush material for body
+            // Fuzzy/plush material for body with soft appearance
             const bodyMaterial = new THREE.MeshStandardMaterial({
                 color: labubuColor.color,
                 roughness: 1.0,
                 metalness: 0
             });
 
-            // Rounder, chubbier body (plush toy shape)
-            const bodyGeometry = new THREE.SphereGeometry(1.8, 32, 32);
+            // Slightly darker fur accent material
+            const darkerColor = new THREE.Color(labubuColor.color).multiplyScalar(0.85);
+            const furAccentMaterial = new THREE.MeshStandardMaterial({
+                color: darkerColor,
+                roughness: 1.0,
+                metalness: 0
+            });
+
+            // === BODY - Round plush shape ===
+            const bodyGeometry = new THREE.SphereGeometry(1.6, 32, 32);
             const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-            body.scale.set(1, 1.1, 0.9);
+            body.scale.set(1, 0.95, 0.85);
             body.position.y = 0;
             labubuGroup.add(body);
 
-            // Larger, rounder head
-            const headGeometry = new THREE.SphereGeometry(1.5, 32, 32);
+            // Add fur tufts on body for texture
+            const furTuftGeometry = new THREE.SphereGeometry(0.25, 8, 8);
+            const furPositions = [
+                { x: -1.2, y: 0.5, z: 0.6 }, { x: 1.2, y: 0.5, z: 0.6 },
+                { x: -1.0, y: -0.3, z: 0.8 }, { x: 1.0, y: -0.3, z: 0.8 },
+                { x: 0, y: 0.8, z: 1.0 }, { x: -0.5, y: 0.6, z: 1.1 }, { x: 0.5, y: 0.6, z: 1.1 },
+                { x: -1.3, y: 0, z: 0 }, { x: 1.3, y: 0, z: 0 }
+            ];
+            furPositions.forEach(pos => {
+                const tuft = new THREE.Mesh(furTuftGeometry, furAccentMaterial);
+                tuft.position.set(pos.x, pos.y, pos.z);
+                tuft.scale.set(0.8 + Math.random() * 0.4, 0.8 + Math.random() * 0.4, 0.6);
+                labubuGroup.add(tuft);
+            });
+
+            // === HEAD - Large round head (signature Labubu proportions) ===
+            const headGeometry = new THREE.SphereGeometry(1.7, 32, 32);
             const head = new THREE.Mesh(headGeometry, bodyMaterial);
-            head.position.y = 2.2;
-            head.scale.set(1.1, 1, 1);
+            head.position.y = 2.4;
+            head.scale.set(1.15, 1.05, 1);
             labubuGroup.add(head);
 
-            // Two-toned pointy elf ears (signature Labubu feature)
-            // Outer ear (main color)
-            const outerEarGeometry = new THREE.ConeGeometry(0.5, 1.8, 8);
-            const leftOuterEar = new THREE.Mesh(outerEarGeometry, bodyMaterial);
-            leftOuterEar.position.set(-1.0, 3.5, 0);
-            leftOuterEar.rotation.z = 0.4;
-            labubuGroup.add(leftOuterEar);
+            // Cheek puffs for cuter look
+            const cheekGeometry = new THREE.SphereGeometry(0.4, 16, 16);
+            const leftCheek = new THREE.Mesh(cheekGeometry, bodyMaterial);
+            leftCheek.position.set(-1.1, 1.9, 0.8);
+            leftCheek.scale.set(1, 0.8, 0.6);
+            labubuGroup.add(leftCheek);
+            const rightCheek = new THREE.Mesh(cheekGeometry, bodyMaterial);
+            rightCheek.position.set(1.1, 1.9, 0.8);
+            rightCheek.scale.set(1, 0.8, 0.6);
+            labubuGroup.add(rightCheek);
 
-            const rightOuterEar = new THREE.Mesh(outerEarGeometry, bodyMaterial);
-            rightOuterEar.position.set(1.0, 3.5, 0);
-            rightOuterEar.rotation.z = -0.4;
-            labubuGroup.add(rightOuterEar);
+            // Head fur tufts
+            const headFurPositions = [
+                { x: -1.4, y: 2.8, z: 0.3 }, { x: 1.4, y: 2.8, z: 0.3 },
+                { x: 0, y: 3.8, z: 0.2 }, { x: -0.6, y: 3.6, z: 0.3 }, { x: 0.6, y: 3.6, z: 0.3 }
+            ];
+            headFurPositions.forEach(pos => {
+                const tuft = new THREE.Mesh(furTuftGeometry, furAccentMaterial);
+                tuft.position.set(pos.x, pos.y, pos.z);
+                tuft.scale.set(0.7 + Math.random() * 0.3, 0.9 + Math.random() * 0.3, 0.5);
+                labubuGroup.add(tuft);
+            });
+
+            // === EARS - Long rabbit-like pointed ears (signature feature) ===
+            // Create elongated ear shape using multiple parts
+            // Outer ear base
+            const earBaseGeometry = new THREE.CapsuleGeometry(0.4, 1.8, 8, 16);
+            const leftEarBase = new THREE.Mesh(earBaseGeometry, bodyMaterial);
+            leftEarBase.position.set(-0.9, 4.2, -0.1);
+            leftEarBase.rotation.z = 0.3;
+            leftEarBase.rotation.x = -0.1;
+            labubuGroup.add(leftEarBase);
+
+            const rightEarBase = new THREE.Mesh(earBaseGeometry, bodyMaterial);
+            rightEarBase.position.set(0.9, 4.2, -0.1);
+            rightEarBase.rotation.z = -0.3;
+            rightEarBase.rotation.x = -0.1;
+            labubuGroup.add(rightEarBase);
+
+            // Ear tips (pointed)
+            const earTipGeometry = new THREE.ConeGeometry(0.35, 1.0, 8);
+            const leftEarTip = new THREE.Mesh(earTipGeometry, bodyMaterial);
+            leftEarTip.position.set(-1.15, 5.5, -0.15);
+            leftEarTip.rotation.z = 0.3;
+            labubuGroup.add(leftEarTip);
+
+            const rightEarTip = new THREE.Mesh(earTipGeometry, bodyMaterial);
+            rightEarTip.position.set(1.15, 5.5, -0.15);
+            rightEarTip.rotation.z = -0.3;
+            labubuGroup.add(rightEarTip);
 
             // Inner ear (gradient/lighter color)
-            const innerEarGeometry = new THREE.ConeGeometry(0.3, 1.2, 8);
-            const innerEarMaterial = new THREE.MeshStandardMaterial({ color: labubuColor.gradient, roughness: 0.9 });
+            const innerEarGeometry = new THREE.CapsuleGeometry(0.22, 1.4, 8, 16);
+            const innerEarMaterial = new THREE.MeshStandardMaterial({ color: labubuColor.gradient, roughness: 0.8 });
             const leftInnerEar = new THREE.Mesh(innerEarGeometry, innerEarMaterial);
-            leftInnerEar.position.set(-0.95, 3.4, 0.15);
-            leftInnerEar.rotation.z = 0.4;
+            leftInnerEar.position.set(-0.85, 4.15, 0.15);
+            leftInnerEar.rotation.z = 0.3;
+            leftInnerEar.rotation.x = -0.1;
             labubuGroup.add(leftInnerEar);
 
             const rightInnerEar = new THREE.Mesh(innerEarGeometry, innerEarMaterial);
-            rightInnerEar.position.set(0.95, 3.4, 0.15);
-            rightInnerEar.rotation.z = -0.4;
+            rightInnerEar.position.set(0.85, 4.15, 0.15);
+            rightInnerEar.rotation.z = -0.3;
+            rightInnerEar.rotation.x = -0.1;
             labubuGroup.add(rightInnerEar);
 
-            // Large glittery eyes (wide, expressive)
-            const eyeWhiteGeometry = new THREE.SphereGeometry(0.45, 16, 16);
-            const eyeWhiteMaterial = new THREE.MeshBasicMaterial({ color: 0x111111 });
+            // === EYES - Big wide gradient glittery eyes ===
+            // Eye sockets (dark background)
+            const eyeSocketGeometry = new THREE.SphereGeometry(0.55, 16, 16);
+            const eyeSocketMaterial = new THREE.MeshBasicMaterial({ color: 0x0a0a0a });
 
-            const leftEyeWhite = new THREE.Mesh(eyeWhiteGeometry, eyeWhiteMaterial);
-            leftEyeWhite.position.set(-0.5, 2.3, 1.2);
-            leftEyeWhite.scale.set(1, 1.1, 0.5);
-            labubuGroup.add(leftEyeWhite);
+            const leftEyeSocket = new THREE.Mesh(eyeSocketGeometry, eyeSocketMaterial);
+            leftEyeSocket.position.set(-0.55, 2.5, 1.35);
+            leftEyeSocket.scale.set(1.1, 1.2, 0.5);
+            labubuGroup.add(leftEyeSocket);
 
-            const rightEyeWhite = new THREE.Mesh(eyeWhiteGeometry, eyeWhiteMaterial);
-            rightEyeWhite.position.set(0.5, 2.3, 1.2);
-            rightEyeWhite.scale.set(1, 1.1, 0.5);
-            labubuGroup.add(rightEyeWhite);
+            const rightEyeSocket = new THREE.Mesh(eyeSocketGeometry, eyeSocketMaterial);
+            rightEyeSocket.position.set(0.55, 2.5, 1.35);
+            rightEyeSocket.scale.set(1.1, 1.2, 0.5);
+            labubuGroup.add(rightEyeSocket);
 
-            // Glitter/gradient iris (tonal gradient glitter eyes)
-            const irisGeometry = new THREE.SphereGeometry(0.35, 16, 16);
+            // Gradient iris (big expressive eyes)
+            const irisGeometry = new THREE.SphereGeometry(0.42, 16, 16);
             const irisMaterial = new THREE.MeshBasicMaterial({ color: labubuColor.gradient });
             const leftIris = new THREE.Mesh(irisGeometry, irisMaterial);
-            leftIris.position.set(-0.5, 2.35, 1.35);
-            leftIris.scale.set(1, 1, 0.3);
+            leftIris.position.set(-0.55, 2.55, 1.5);
+            leftIris.scale.set(1, 1.1, 0.35);
             labubuGroup.add(leftIris);
 
             const rightIris = new THREE.Mesh(irisGeometry, irisMaterial);
-            rightIris.position.set(0.5, 2.35, 1.35);
-            rightIris.scale.set(1, 1, 0.3);
+            rightIris.position.set(0.55, 2.55, 1.5);
+            rightIris.scale.set(1, 1.1, 0.35);
             labubuGroup.add(rightIris);
 
-            // Eye sparkles (multiple for glitter effect)
+            // Pupil
+            const pupilGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+            const pupilMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            const leftPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+            leftPupil.position.set(-0.55, 2.5, 1.55);
+            leftPupil.scale.set(1, 1.2, 0.3);
+            labubuGroup.add(leftPupil);
+
+            const rightPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+            rightPupil.position.set(0.55, 2.5, 1.55);
+            rightPupil.scale.set(1, 1.2, 0.3);
+            labubuGroup.add(rightPupil);
+
+            // Eye sparkles (glitter effect - multiple sparkles per eye)
             const sparkleMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-            const sparkleGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+            const sparkleGeometry = new THREE.SphereGeometry(0.12, 8, 8);
+            const smallSparkleGeometry = new THREE.SphereGeometry(0.06, 8, 8);
 
+            // Left eye sparkles
             const leftSparkle1 = new THREE.Mesh(sparkleGeometry, sparkleMaterial);
-            leftSparkle1.position.set(-0.6, 2.5, 1.4);
+            leftSparkle1.position.set(-0.7, 2.7, 1.58);
             labubuGroup.add(leftSparkle1);
-            const leftSparkle2 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), sparkleMaterial);
-            leftSparkle2.position.set(-0.4, 2.25, 1.4);
+            const leftSparkle2 = new THREE.Mesh(smallSparkleGeometry, sparkleMaterial);
+            leftSparkle2.position.set(-0.4, 2.4, 1.58);
             labubuGroup.add(leftSparkle2);
+            const leftSparkle3 = new THREE.Mesh(smallSparkleGeometry, sparkleMaterial);
+            leftSparkle3.position.set(-0.65, 2.35, 1.58);
+            labubuGroup.add(leftSparkle3);
 
+            // Right eye sparkles
             const rightSparkle1 = new THREE.Mesh(sparkleGeometry, sparkleMaterial);
-            rightSparkle1.position.set(0.4, 2.5, 1.4);
+            rightSparkle1.position.set(0.4, 2.7, 1.58);
             labubuGroup.add(rightSparkle1);
-            const rightSparkle2 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), sparkleMaterial);
-            rightSparkle2.position.set(0.6, 2.25, 1.4);
+            const rightSparkle2 = new THREE.Mesh(smallSparkleGeometry, sparkleMaterial);
+            rightSparkle2.position.set(0.7, 2.4, 1.58);
             labubuGroup.add(rightSparkle2);
+            const rightSparkle3 = new THREE.Mesh(smallSparkleGeometry, sparkleMaterial);
+            rightSparkle3.position.set(0.45, 2.35, 1.58);
+            labubuGroup.add(rightSparkle3);
 
-            // Nose (matching color to toenails)
-            const noseGeometry = new THREE.SphereGeometry(0.15, 8, 8);
+            // === NOSE - Small cute nose ===
+            const noseGeometry = new THREE.SphereGeometry(0.18, 12, 12);
             const noseMaterial = new THREE.MeshStandardMaterial({ color: labubuColor.gradient, roughness: 0.3 });
             const nose = new THREE.Mesh(noseGeometry, noseMaterial);
-            nose.position.set(0, 1.9, 1.45);
-            nose.scale.set(1.2, 0.8, 0.8);
+            nose.position.set(0, 2.0, 1.6);
+            nose.scale.set(1.3, 0.9, 0.8);
             labubuGroup.add(nose);
 
-            // Wide mouth opening (mischievous grin)
-            const mouthGeometry = new THREE.TorusGeometry(0.5, 0.12, 8, 16, Math.PI);
-            const mouthMaterial = new THREE.MeshBasicMaterial({ color: 0x1a0000 });
+            // === MOUTH - Wide mischievous grin ===
+            // Mouth opening (curved smile shape)
+            const mouthCurve = new THREE.EllipseCurve(0, 0, 0.6, 0.35, Math.PI * 0.15, Math.PI * 0.85, false, 0);
+            const mouthPoints = mouthCurve.getPoints(20);
+            const mouthShape = new THREE.Shape(mouthPoints);
+            const mouthGeometry = new THREE.ShapeGeometry(mouthShape);
+            const mouthMaterial = new THREE.MeshBasicMaterial({ color: 0x1a0000, side: THREE.DoubleSide });
             const mouth = new THREE.Mesh(mouthGeometry, mouthMaterial);
-            mouth.position.set(0, 1.55, 1.25);
-            mouth.rotation.x = Math.PI;
-            mouth.rotation.z = Math.PI;
+            mouth.position.set(0, 1.55, 1.55);
+            mouth.rotation.x = 0.1;
             labubuGroup.add(mouth);
 
-            // Mouth interior
-            const mouthInsideGeometry = new THREE.SphereGeometry(0.45, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
-            const mouthInsideMaterial = new THREE.MeshBasicMaterial({ color: 0x330000, side: THREE.BackSide });
-            const mouthInside = new THREE.Mesh(mouthInsideGeometry, mouthInsideMaterial);
-            mouthInside.position.set(0, 1.55, 1.1);
-            mouthInside.rotation.x = Math.PI / 2;
-            labubuGroup.add(mouthInside);
+            // Dark mouth interior
+            const mouthInteriorGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+            const mouthInteriorMaterial = new THREE.MeshBasicMaterial({ color: 0x220000 });
+            const mouthInterior = new THREE.Mesh(mouthInteriorGeometry, mouthInteriorMaterial);
+            mouthInterior.position.set(0, 1.6, 1.3);
+            mouthInterior.scale.set(1.2, 0.6, 0.5);
+            labubuGroup.add(mouthInterior);
 
-            // 9 Sharp teeth (signature Labubu mischievous smile!)
-            const toothMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-            const teethPositions = [
-                { x: -0.36, size: 0.08 },
-                { x: -0.27, size: 0.10 },
-                { x: -0.16, size: 0.12 },
-                { x: -0.06, size: 0.11 },
-                { x: 0.04, size: 0.13 },  // Center tooth slightly bigger
-                { x: 0.14, size: 0.11 },
-                { x: 0.24, size: 0.12 },
-                { x: 0.33, size: 0.10 },
-                { x: 0.41, size: 0.08 }
+            // === 9 SHARP TEETH - Signature Labubu mischievous smile! ===
+            const toothMaterial = new THREE.MeshBasicMaterial({ color: 0xfffffe });
+            const teethConfig = [
+                { x: -0.42, size: 0.07, height: 0.22 },
+                { x: -0.31, size: 0.09, height: 0.28 },
+                { x: -0.18, size: 0.11, height: 0.32 },
+                { x: -0.06, size: 0.10, height: 0.30 },
+                { x: 0.06, size: 0.12, height: 0.35 },  // Center tooth slightly bigger
+                { x: 0.18, size: 0.10, height: 0.30 },
+                { x: 0.30, size: 0.11, height: 0.32 },
+                { x: 0.41, size: 0.09, height: 0.28 },
+                { x: 0.50, size: 0.07, height: 0.22 }
             ];
 
-            teethPositions.forEach((t, i) => {
-                const toothGeometry = new THREE.ConeGeometry(t.size, 0.25, 6);
+            teethConfig.forEach((t, i) => {
+                const toothGeometry = new THREE.ConeGeometry(t.size, t.height, 6);
                 const tooth = new THREE.Mesh(toothGeometry, toothMaterial);
-                tooth.position.set(t.x, 1.35, 1.3);
+                tooth.position.set(t.x, 1.38, 1.5);
                 tooth.rotation.x = Math.PI;
-                // One special colored tooth (signature feature)
-                if (i === 4) {
-                    tooth.material = new THREE.MeshBasicMaterial({ color: labubuColor.gradient });
-                }
+                // Slight random rotation for natural look
+                tooth.rotation.z = (Math.random() - 0.5) * 0.1;
                 labubuGroup.add(tooth);
             });
 
-            // Chubby arms
-            const armGeometry = new THREE.SphereGeometry(0.4, 16, 16);
-            const leftArm = new THREE.Mesh(armGeometry, bodyMaterial);
-            leftArm.position.set(-1.8, 0.3, 0);
-            leftArm.scale.set(0.8, 1.2, 0.8);
-            labubuGroup.add(leftArm);
+            // === ARMS - Long fuzzy arms ===
+            // Upper arm
+            const upperArmGeometry = new THREE.CapsuleGeometry(0.28, 0.8, 8, 16);
+            const leftUpperArm = new THREE.Mesh(upperArmGeometry, bodyMaterial);
+            leftUpperArm.position.set(-1.6, 0.2, 0.2);
+            leftUpperArm.rotation.z = 0.4;
+            labubuGroup.add(leftUpperArm);
 
-            const rightArm = new THREE.Mesh(armGeometry, bodyMaterial);
-            rightArm.position.set(1.8, 0.3, 0);
-            rightArm.scale.set(0.8, 1.2, 0.8);
-            labubuGroup.add(rightArm);
+            const rightUpperArm = new THREE.Mesh(upperArmGeometry, bodyMaterial);
+            rightUpperArm.position.set(1.6, 0.2, 0.2);
+            rightUpperArm.rotation.z = -0.4;
+            labubuGroup.add(rightUpperArm);
 
-            // Cute stubby hands
-            const handGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+            // Lower arm / hands
+            const handGeometry = new THREE.SphereGeometry(0.35, 16, 16);
             const leftHand = new THREE.Mesh(handGeometry, bodyMaterial);
-            leftHand.position.set(-2.0, -0.2, 0.2);
+            leftHand.position.set(-2.1, -0.3, 0.4);
+            leftHand.scale.set(0.9, 1, 0.8);
             labubuGroup.add(leftHand);
 
             const rightHand = new THREE.Mesh(handGeometry, bodyMaterial);
-            rightHand.position.set(2.0, -0.2, 0.2);
+            rightHand.position.set(2.1, -0.3, 0.4);
+            rightHand.scale.set(0.9, 1, 0.8);
             labubuGroup.add(rightHand);
 
-            // Chubby feet with toenails
-            const footGeometry = new THREE.SphereGeometry(0.6, 16, 16);
+            // Tiny claws on hands
+            const clawMaterial = new THREE.MeshStandardMaterial({ color: labubuColor.gradient, roughness: 0.3 });
+            const clawGeometry = new THREE.ConeGeometry(0.06, 0.15, 6);
+            [-2.0, 2.0].forEach(handX => {
+                for (let i = 0; i < 3; i++) {
+                    const claw = new THREE.Mesh(clawGeometry, clawMaterial);
+                    const offsetX = handX < 0 ? -0.15 : 0.15;
+                    claw.position.set(handX + offsetX, -0.5, 0.55 + i * 0.12);
+                    claw.rotation.x = Math.PI * 0.7;
+                    labubuGroup.add(claw);
+                }
+            });
+
+            // === LEGS - Stubby fuzzy legs ===
+            const legGeometry = new THREE.CapsuleGeometry(0.35, 0.5, 8, 16);
+            const leftLeg = new THREE.Mesh(legGeometry, bodyMaterial);
+            leftLeg.position.set(-0.7, -1.3, 0);
+            labubuGroup.add(leftLeg);
+
+            const rightLeg = new THREE.Mesh(legGeometry, bodyMaterial);
+            rightLeg.position.set(0.7, -1.3, 0);
+            labubuGroup.add(rightLeg);
+
+            // === FEET - Cute chubby feet ===
+            const footGeometry = new THREE.SphereGeometry(0.55, 16, 16);
             const leftFoot = new THREE.Mesh(footGeometry, bodyMaterial);
-            leftFoot.position.set(-0.8, -1.6, 0.4);
-            leftFoot.scale.set(0.9, 0.5, 1.2);
+            leftFoot.position.set(-0.7, -1.8, 0.35);
+            leftFoot.scale.set(0.85, 0.45, 1.1);
             labubuGroup.add(leftFoot);
 
             const rightFoot = new THREE.Mesh(footGeometry, bodyMaterial);
-            rightFoot.position.set(0.8, -1.6, 0.4);
-            rightFoot.scale.set(0.9, 0.5, 1.2);
+            rightFoot.position.set(0.7, -1.8, 0.35);
+            rightFoot.scale.set(0.85, 0.45, 1.1);
             labubuGroup.add(rightFoot);
 
-            // Toenails (matching nose color)
-            const toenailGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+            // Toenails / claws
+            const toenailGeometry = new THREE.SphereGeometry(0.09, 8, 8);
             const toenailMaterial = new THREE.MeshStandardMaterial({ color: labubuColor.gradient, roughness: 0.3 });
-
-            [-0.8, 0.8].forEach(footX => {
+            [-0.7, 0.7].forEach(footX => {
                 for (let i = 0; i < 3; i++) {
                     const toenail = new THREE.Mesh(toenailGeometry, toenailMaterial);
-                    toenail.position.set(footX + (i - 1) * 0.2, -1.65, 0.95);
-                    toenail.scale.set(0.8, 0.5, 1);
+                    toenail.position.set(footX + (i - 1) * 0.18, -1.85, 0.85);
+                    toenail.scale.set(0.9, 0.5, 1.2);
                     labubuGroup.add(toenail);
                 }
             });
 
-            // Small tail puff
-            const tailGeometry = new THREE.SphereGeometry(0.35, 16, 16);
-            const tail = new THREE.Mesh(tailGeometry, bodyMaterial);
-            tail.position.set(0, -0.3, -1.5);
+            // === TAIL - Small fluffy tail puff ===
+            const tailGeometry = new THREE.SphereGeometry(0.4, 16, 16);
+            const tail = new THREE.Mesh(tailGeometry, furAccentMaterial);
+            tail.position.set(0, -0.2, -1.35);
+            tail.scale.set(1, 0.9, 0.8);
             labubuGroup.add(tail);
+
+            // Extra tail fluff
+            const tailFluffGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+            const tailFluff1 = new THREE.Mesh(tailFluffGeometry, bodyMaterial);
+            tailFluff1.position.set(-0.2, -0.1, -1.5);
+            labubuGroup.add(tailFluff1);
+            const tailFluff2 = new THREE.Mesh(tailFluffGeometry, bodyMaterial);
+            tailFluff2.position.set(0.2, -0.3, -1.5);
+            labubuGroup.add(tailFluff2);
 
             // Glowing boundary ring (semi-transparent barrel) to show collision area
             const boundaryRadius = 2.5;  // Match collision radius
@@ -2931,6 +3053,14 @@
 
             if (gameStarted && !gameFinished) {
                 gameTime += delta;
+
+                // Health regeneration - slowly recover health over time (more fun for kids!)
+                // Regenerate ~2 health per second (gentle but helpful)
+                const regenRate = 2 * delta;
+                if (health < MAX_HEALTH) {
+                    health = Math.min(MAX_HEALTH, health + regenRate);
+                    updateHealthBar();
+                }
             }
 
             updateObstacles();

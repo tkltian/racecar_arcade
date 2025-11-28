@@ -1483,29 +1483,41 @@
             bannerCtx.strokeText('FINISH', bannerCanvas.width / 2, bannerCanvas.height / 2);
             bannerCtx.fillText('FINISH', bannerCanvas.width / 2, bannerCanvas.height / 2);
 
+            // Calculate support post positions first
+            const leftPostX = lastWp.x - perpX * (TRACK_WIDTH / 2 + 2);
+            const leftPostZ = lastWp.z - perpZ * (TRACK_WIDTH / 2 + 2);
+            const rightPostX = lastWp.x + perpX * (TRACK_WIDTH / 2 + 2);
+            const rightPostZ = lastWp.z + perpZ * (TRACK_WIDTH / 2 + 2);
+
+            // Create banner that spans between the posts
             const bannerTexture = new THREE.CanvasTexture(bannerCanvas);
-            const bannerGeometry = new THREE.PlaneGeometry(TRACK_WIDTH + 4, 3);
+            const bannerWidth = Math.sqrt(Math.pow(rightPostX - leftPostX, 2) + Math.pow(rightPostZ - leftPostZ, 2));
+            const bannerGeometry = new THREE.PlaneGeometry(bannerWidth, 3);
             const bannerMaterial = new THREE.MeshBasicMaterial({ map: bannerTexture, side: THREE.DoubleSide });
             const banner = new THREE.Mesh(bannerGeometry, bannerMaterial);
-            banner.rotation.y = finishAngle + Math.PI / 2;  // Perpendicular to track direction
-            banner.position.set(lastWp.x, 8, lastWp.z);
+
+            // Position banner at center between posts, at height 8
+            banner.position.set(
+                (leftPostX + rightPostX) / 2,
+                8,
+                (leftPostZ + rightPostZ) / 2
+            );
+
+            // Calculate rotation to span between posts (perpendicular to track)
+            const bannerAngle = Math.atan2(rightPostX - leftPostX, rightPostZ - leftPostZ);
+            banner.rotation.y = bannerAngle;
             scene.add(banner);
 
+            // Support posts on left and right sides of track
             const supportGeometry = new THREE.CylinderGeometry(0.3, 0.3, 10, 8);
             const supportMaterial = new THREE.MeshStandardMaterial({ color: 0x888888 });
+
             const leftSupport = new THREE.Mesh(supportGeometry, supportMaterial);
-            leftSupport.position.set(
-                lastWp.x - perpX * (TRACK_WIDTH / 2 + 2),
-                5,
-                lastWp.z - perpZ * (TRACK_WIDTH / 2 + 2)
-            );
+            leftSupport.position.set(leftPostX, 5, leftPostZ);
             scene.add(leftSupport);
+
             const rightSupport = new THREE.Mesh(supportGeometry, supportMaterial);
-            rightSupport.position.set(
-                lastWp.x + perpX * (TRACK_WIDTH / 2 + 2),
-                5,
-                lastWp.z + perpZ * (TRACK_WIDTH / 2 + 2)
-            );
+            rightSupport.position.set(rightPostX, 5, rightPostZ);
             scene.add(rightSupport);
         }
 

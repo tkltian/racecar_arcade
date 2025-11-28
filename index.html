@@ -518,7 +518,8 @@
             rotation: 0,
             mesh: null,
             velocityY: 0,
-            isJumping: false
+            isJumping: false,
+            onRamp: false
         };
         let keys = {};
         let touchKeys = {};
@@ -669,6 +670,7 @@
             car.speed = 0;
             car.velocityY = 0;
             car.isJumping = false;
+            car.onRamp = false;
 
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87CEEB);
@@ -844,8 +846,7 @@
                 const rampShape = new THREE.Shape();
                 rampShape.moveTo(0, 0);
                 rampShape.lineTo(rampLength, 0);
-                rampShape.lineTo(rampLength, 0);
-                rampShape.lineTo(0, rampHeight);
+                rampShape.lineTo(rampLength, rampHeight);
                 rampShape.lineTo(0, 0);
 
                 const extrudeSettings = { depth: rampWidth, bevelEnabled: false };
@@ -858,7 +859,7 @@
 
                 const ramp = new THREE.Mesh(rampGeometry, rampMaterial);
                 ramp.rotation.y = Math.PI / 2;
-                ramp.position.set(rampX - rampWidth / 2, 0, rampZ + rampLength);
+                ramp.position.set(rampX + rampWidth / 2, 0, rampZ);
                 ramp.castShadow = true;
                 ramp.receiveShadow = true;
                 scene.add(ramp);
@@ -978,88 +979,206 @@
             const colorIndex = index % LABUBU_COLORS.length;
             const labubuColor = LABUBU_COLORS[colorIndex];
 
-            const bodyGeometry = new THREE.SphereGeometry(1.5, 16, 16);
-            const bodyMaterial = new THREE.MeshStandardMaterial({ color: labubuColor.color, roughness: 0.8 });
+            // Fuzzy/plush material for body
+            const bodyMaterial = new THREE.MeshStandardMaterial({
+                color: labubuColor.color,
+                roughness: 1.0,
+                metalness: 0
+            });
+
+            // Rounder, chubbier body (plush toy shape)
+            const bodyGeometry = new THREE.SphereGeometry(1.8, 32, 32);
             const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-            body.scale.y = 1.2;
+            body.scale.set(1, 1.1, 0.9);
+            body.position.y = 0;
             labubuGroup.add(body);
 
-            const headGeometry = new THREE.SphereGeometry(1.2, 16, 16);
+            // Larger, rounder head
+            const headGeometry = new THREE.SphereGeometry(1.5, 32, 32);
             const head = new THREE.Mesh(headGeometry, bodyMaterial);
-            head.position.y = 1.8;
+            head.position.y = 2.2;
+            head.scale.set(1.1, 1, 1);
             labubuGroup.add(head);
 
-            const earGeometry = new THREE.ConeGeometry(0.4, 1.2, 8);
-            const earMaterial = new THREE.MeshStandardMaterial({ color: labubuColor.gradient });
+            // Two-toned pointy elf ears (signature Labubu feature)
+            // Outer ear (main color)
+            const outerEarGeometry = new THREE.ConeGeometry(0.5, 1.8, 8);
+            const leftOuterEar = new THREE.Mesh(outerEarGeometry, bodyMaterial);
+            leftOuterEar.position.set(-1.0, 3.5, 0);
+            leftOuterEar.rotation.z = 0.4;
+            labubuGroup.add(leftOuterEar);
 
-            const leftEar = new THREE.Mesh(earGeometry, earMaterial);
-            leftEar.position.set(-0.7, 2.8, 0);
-            leftEar.rotation.z = 0.3;
-            labubuGroup.add(leftEar);
+            const rightOuterEar = new THREE.Mesh(outerEarGeometry, bodyMaterial);
+            rightOuterEar.position.set(1.0, 3.5, 0);
+            rightOuterEar.rotation.z = -0.4;
+            labubuGroup.add(rightOuterEar);
 
-            const rightEar = new THREE.Mesh(earGeometry, earMaterial);
-            rightEar.position.set(0.7, 2.8, 0);
-            rightEar.rotation.z = -0.3;
-            labubuGroup.add(rightEar);
+            // Inner ear (gradient/lighter color)
+            const innerEarGeometry = new THREE.ConeGeometry(0.3, 1.2, 8);
+            const innerEarMaterial = new THREE.MeshStandardMaterial({ color: labubuColor.gradient, roughness: 0.9 });
+            const leftInnerEar = new THREE.Mesh(innerEarGeometry, innerEarMaterial);
+            leftInnerEar.position.set(-0.95, 3.4, 0.15);
+            leftInnerEar.rotation.z = 0.4;
+            labubuGroup.add(leftInnerEar);
 
-            const eyeGeometry = new THREE.SphereGeometry(0.25, 8, 8);
-            const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
-            const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-            leftEye.position.set(-0.4, 2, 1);
-            labubuGroup.add(leftEye);
-            const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-            rightEye.position.set(0.4, 2, 1);
-            labubuGroup.add(rightEye);
+            const rightInnerEar = new THREE.Mesh(innerEarGeometry, innerEarMaterial);
+            rightInnerEar.position.set(0.95, 3.4, 0.15);
+            rightInnerEar.rotation.z = -0.4;
+            labubuGroup.add(rightInnerEar);
 
-            const sparkleGeometry = new THREE.SphereGeometry(0.08, 8, 8);
+            // Large glittery eyes (wide, expressive)
+            const eyeWhiteGeometry = new THREE.SphereGeometry(0.45, 16, 16);
+            const eyeWhiteMaterial = new THREE.MeshBasicMaterial({ color: 0x111111 });
+
+            const leftEyeWhite = new THREE.Mesh(eyeWhiteGeometry, eyeWhiteMaterial);
+            leftEyeWhite.position.set(-0.5, 2.3, 1.2);
+            leftEyeWhite.scale.set(1, 1.1, 0.5);
+            labubuGroup.add(leftEyeWhite);
+
+            const rightEyeWhite = new THREE.Mesh(eyeWhiteGeometry, eyeWhiteMaterial);
+            rightEyeWhite.position.set(0.5, 2.3, 1.2);
+            rightEyeWhite.scale.set(1, 1.1, 0.5);
+            labubuGroup.add(rightEyeWhite);
+
+            // Glitter/gradient iris (tonal gradient glitter eyes)
+            const irisGeometry = new THREE.SphereGeometry(0.35, 16, 16);
+            const irisMaterial = new THREE.MeshBasicMaterial({ color: labubuColor.gradient });
+            const leftIris = new THREE.Mesh(irisGeometry, irisMaterial);
+            leftIris.position.set(-0.5, 2.35, 1.35);
+            leftIris.scale.set(1, 1, 0.3);
+            labubuGroup.add(leftIris);
+
+            const rightIris = new THREE.Mesh(irisGeometry, irisMaterial);
+            rightIris.position.set(0.5, 2.35, 1.35);
+            rightIris.scale.set(1, 1, 0.3);
+            labubuGroup.add(rightIris);
+
+            // Eye sparkles (multiple for glitter effect)
             const sparkleMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-            const leftSparkle = new THREE.Mesh(sparkleGeometry, sparkleMaterial);
-            leftSparkle.position.set(-0.35, 2.1, 1.2);
-            labubuGroup.add(leftSparkle);
-            const rightSparkle = new THREE.Mesh(sparkleGeometry, sparkleMaterial);
-            rightSparkle.position.set(0.45, 2.1, 1.2);
-            labubuGroup.add(rightSparkle);
+            const sparkleGeometry = new THREE.SphereGeometry(0.1, 8, 8);
 
-            const mouthGeometry = new THREE.BoxGeometry(0.6, 0.2, 0.1);
-            const mouthMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 });
+            const leftSparkle1 = new THREE.Mesh(sparkleGeometry, sparkleMaterial);
+            leftSparkle1.position.set(-0.6, 2.5, 1.4);
+            labubuGroup.add(leftSparkle1);
+            const leftSparkle2 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), sparkleMaterial);
+            leftSparkle2.position.set(-0.4, 2.25, 1.4);
+            labubuGroup.add(leftSparkle2);
+
+            const rightSparkle1 = new THREE.Mesh(sparkleGeometry, sparkleMaterial);
+            rightSparkle1.position.set(0.4, 2.5, 1.4);
+            labubuGroup.add(rightSparkle1);
+            const rightSparkle2 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), sparkleMaterial);
+            rightSparkle2.position.set(0.6, 2.25, 1.4);
+            labubuGroup.add(rightSparkle2);
+
+            // Nose (matching color to toenails)
+            const noseGeometry = new THREE.SphereGeometry(0.15, 8, 8);
+            const noseMaterial = new THREE.MeshStandardMaterial({ color: labubuColor.gradient, roughness: 0.3 });
+            const nose = new THREE.Mesh(noseGeometry, noseMaterial);
+            nose.position.set(0, 1.9, 1.45);
+            nose.scale.set(1.2, 0.8, 0.8);
+            labubuGroup.add(nose);
+
+            // Wide mouth opening (mischievous grin)
+            const mouthGeometry = new THREE.TorusGeometry(0.5, 0.12, 8, 16, Math.PI);
+            const mouthMaterial = new THREE.MeshBasicMaterial({ color: 0x1a0000 });
             const mouth = new THREE.Mesh(mouthGeometry, mouthMaterial);
-            mouth.position.set(0, 1.5, 1.15);
+            mouth.position.set(0, 1.55, 1.25);
+            mouth.rotation.x = Math.PI;
+            mouth.rotation.z = Math.PI;
             labubuGroup.add(mouth);
 
-            const toothGeometry = new THREE.BoxGeometry(0.15, 0.25, 0.1);
-            const toothMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-            const leftTooth = new THREE.Mesh(toothGeometry, toothMaterial);
-            leftTooth.position.set(-0.12, 1.35, 1.15);
-            labubuGroup.add(leftTooth);
-            const rightTooth = new THREE.Mesh(toothGeometry, toothMaterial);
-            rightTooth.position.set(0.12, 1.35, 1.15);
-            labubuGroup.add(rightTooth);
+            // Mouth interior
+            const mouthInsideGeometry = new THREE.SphereGeometry(0.45, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+            const mouthInsideMaterial = new THREE.MeshBasicMaterial({ color: 0x330000, side: THREE.BackSide });
+            const mouthInside = new THREE.Mesh(mouthInsideGeometry, mouthInsideMaterial);
+            mouthInside.position.set(0, 1.55, 1.1);
+            mouthInside.rotation.x = Math.PI / 2;
+            labubuGroup.add(mouthInside);
 
-            // Arms (using cylinder since CapsuleGeometry not in r128)
-            const armGeometry = new THREE.CylinderGeometry(0.25, 0.25, 1, 8);
-            const armMaterial = new THREE.MeshStandardMaterial({ color: labubuColor.color });
-            const leftArm = new THREE.Mesh(armGeometry, armMaterial);
-            leftArm.position.set(-1.5, 0.5, 0);
-            leftArm.rotation.z = 0.5;
+            // 9 Sharp teeth (signature Labubu mischievous smile!)
+            const toothMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const teethPositions = [
+                { x: -0.36, size: 0.08 },
+                { x: -0.27, size: 0.10 },
+                { x: -0.16, size: 0.12 },
+                { x: -0.06, size: 0.11 },
+                { x: 0.04, size: 0.13 },  // Center tooth slightly bigger
+                { x: 0.14, size: 0.11 },
+                { x: 0.24, size: 0.12 },
+                { x: 0.33, size: 0.10 },
+                { x: 0.41, size: 0.08 }
+            ];
+
+            teethPositions.forEach((t, i) => {
+                const toothGeometry = new THREE.ConeGeometry(t.size, 0.25, 6);
+                const tooth = new THREE.Mesh(toothGeometry, toothMaterial);
+                tooth.position.set(t.x, 1.35, 1.3);
+                tooth.rotation.x = Math.PI;
+                // One special colored tooth (signature feature)
+                if (i === 4) {
+                    tooth.material = new THREE.MeshBasicMaterial({ color: labubuColor.gradient });
+                }
+                labubuGroup.add(tooth);
+            });
+
+            // Chubby arms
+            const armGeometry = new THREE.SphereGeometry(0.4, 16, 16);
+            const leftArm = new THREE.Mesh(armGeometry, bodyMaterial);
+            leftArm.position.set(-1.8, 0.3, 0);
+            leftArm.scale.set(0.8, 1.2, 0.8);
             labubuGroup.add(leftArm);
-            const rightArm = new THREE.Mesh(armGeometry, armMaterial);
-            rightArm.position.set(1.5, 0.5, 0);
-            rightArm.rotation.z = -0.5;
+
+            const rightArm = new THREE.Mesh(armGeometry, bodyMaterial);
+            rightArm.position.set(1.8, 0.3, 0);
+            rightArm.scale.set(0.8, 1.2, 0.8);
             labubuGroup.add(rightArm);
 
-            // Feet
-            const footGeometry = new THREE.SphereGeometry(0.5, 8, 8);
-            const leftFoot = new THREE.Mesh(footGeometry, armMaterial);
-            leftFoot.position.set(-0.6, -1.3, 0.3);
-            leftFoot.scale.set(1, 0.6, 1.3);
+            // Cute stubby hands
+            const handGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+            const leftHand = new THREE.Mesh(handGeometry, bodyMaterial);
+            leftHand.position.set(-2.0, -0.2, 0.2);
+            labubuGroup.add(leftHand);
+
+            const rightHand = new THREE.Mesh(handGeometry, bodyMaterial);
+            rightHand.position.set(2.0, -0.2, 0.2);
+            labubuGroup.add(rightHand);
+
+            // Chubby feet with toenails
+            const footGeometry = new THREE.SphereGeometry(0.6, 16, 16);
+            const leftFoot = new THREE.Mesh(footGeometry, bodyMaterial);
+            leftFoot.position.set(-0.8, -1.6, 0.4);
+            leftFoot.scale.set(0.9, 0.5, 1.2);
             labubuGroup.add(leftFoot);
-            const rightFoot = new THREE.Mesh(footGeometry, armMaterial);
-            rightFoot.position.set(0.6, -1.3, 0.3);
-            rightFoot.scale.set(1, 0.6, 1.3);
+
+            const rightFoot = new THREE.Mesh(footGeometry, bodyMaterial);
+            rightFoot.position.set(0.8, -1.6, 0.4);
+            rightFoot.scale.set(0.9, 0.5, 1.2);
             labubuGroup.add(rightFoot);
 
-            labubuGroup.userData.yOffset = 2.5;
+            // Toenails (matching nose color)
+            const toenailGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+            const toenailMaterial = new THREE.MeshStandardMaterial({ color: labubuColor.gradient, roughness: 0.3 });
+
+            [-0.8, 0.8].forEach(footX => {
+                for (let i = 0; i < 3; i++) {
+                    const toenail = new THREE.Mesh(toenailGeometry, toenailMaterial);
+                    toenail.position.set(footX + (i - 1) * 0.2, -1.65, 0.95);
+                    toenail.scale.set(0.8, 0.5, 1);
+                    labubuGroup.add(toenail);
+                }
+            });
+
+            // Small tail puff
+            const tailGeometry = new THREE.SphereGeometry(0.35, 16, 16);
+            const tail = new THREE.Mesh(tailGeometry, bodyMaterial);
+            tail.position.set(0, -0.3, -1.5);
+            labubuGroup.add(tail);
+
+            labubuGroup.userData.yOffset = 3;
             labubuGroup.userData.isLabubu = true;
+            labubuGroup.userData.colorName = labubuColor.name;
+
             return labubuGroup;
         }
 
@@ -1158,7 +1277,12 @@
         }
 
         function checkRamps() {
-            if (car.isJumping) return;
+            if (car.isJumping) {
+                car.onRamp = false;
+                return;
+            }
+
+            car.onRamp = false; // Reset each frame
 
             for (const ramp of ramps) {
                 const carX = car.position.x;
@@ -1174,11 +1298,13 @@
 
                     if (car.position.y <= rampY + 1.1) {
                         car.position.y = rampY + 1;
+                        car.onRamp = true; // Car is on a ramp
 
                         // Launch when reaching top of ramp
                         if (rampProgress > 0.9 && car.speed > 0.5) {
                             car.velocityY = JUMP_VELOCITY * (car.speed / CAR_MAX_SPEED);
                             car.isJumping = true;
+                            car.onRamp = false;
                         }
                     }
                 }
@@ -1300,7 +1426,8 @@
                 collided = true;
             }
 
-            if (collided && currentTime - lastCollisionTime > collisionCooldown) {
+            // Only apply collision damage if not on a ramp (ramps shouldn't hurt the car)
+            if (collided && !car.onRamp && currentTime - lastCollisionTime > collisionCooldown) {
                 applyCollisionEffect();
             }
         }
@@ -1362,6 +1489,7 @@
             car.speed = 0;
             car.velocityY = 0;
             car.isJumping = false;
+            car.onRamp = false;
             gameTime = 0;
             gameStarted = false;
             gameFinished = false;

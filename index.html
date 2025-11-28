@@ -717,6 +717,12 @@
             createFinishLine();
             createScenery();
 
+            // Set initial camera position behind the car
+            const cameraOffset = new THREE.Vector3(0, 1.5, 0.5);
+            cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation);
+            camera.position.copy(car.position).add(cameraOffset);
+            camera.rotation.y = car.rotation;
+
             window.addEventListener('keydown', handleKeyDown);
             window.addEventListener('keyup', handleKeyUp);
             window.addEventListener('resize', onWindowResize);

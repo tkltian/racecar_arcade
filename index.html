@@ -1072,8 +1072,8 @@
         let lastHeartbeat = 0;
         let reconnectAttempts = 0;
         const MAX_RECONNECT_ATTEMPTS = 5;
-        const HEARTBEAT_INTERVAL = 2000; // 2 seconds
-        const HEARTBEAT_TIMEOUT = 6000; // 6 seconds without heartbeat = disconnected
+        const HEARTBEAT_INTERVAL = 1000; // 1 second
+        const HEARTBEAT_TIMEOUT = 3000; // 3 seconds without heartbeat = disconnected
 
         // ICE servers for WebRTC NAT traversal
         const peerConfig = {

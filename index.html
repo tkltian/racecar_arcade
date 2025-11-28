@@ -838,30 +838,27 @@
                     { start: 0.93, end: 0.97, rate: -0.15 },  // Medium left to finish
                 ];
             } else if (layout === 'mountain') {
-                // 2x longer: Mountain pass with variety - sweepers, U-turns, straights, sharp turns
+                // 2x longer: Mountain pass - varied turns without self-intersection
+                // Each turn kept under 60° to prevent track crossing
                 return [
-                    // STRAIGHT START (0.00-0.05)
-                    // Wide sweeping right curve
-                    { start: 0.05, end: 0.14, rate: 0.05 },   // Long gentle sweeper right
-                    // STRAIGHT (0.14-0.18)
-                    // Sharp left turn
-                    { start: 0.18, end: 0.22, rate: -0.28 },  // Sharp left
-                    // STRAIGHT (0.22-0.27)
-                    // U-turn right (scenic overlook)
-                    { start: 0.27, end: 0.36, rate: 0.32 },   // U-turn right (~130°)
-                    // STRAIGHT descent (0.36-0.42)
-                    // Wide sweeping left
-                    { start: 0.42, end: 0.52, rate: -0.055 }, // Long gentle sweeper left
-                    // Sharp right turn
-                    { start: 0.55, end: 0.59, rate: 0.26 },   // Sharp right
-                    // STRAIGHT (0.59-0.65)
-                    // U-turn left (mountain switchback)
-                    { start: 0.65, end: 0.74, rate: -0.30 },  // U-turn left (~120°)
-                    // STRAIGHT (0.74-0.80)
-                    // Final sweeping right to finish
-                    { start: 0.80, end: 0.92, rate: 0.045 },  // Long gentle sweeper right
-                    // Gentle left into finish
-                    { start: 0.95, end: 0.98, rate: -0.10 },  // Slight left to finish
+                    // Gentle sweeper right
+                    { start: 0.04, end: 0.12, rate: 0.06 },   // ~50° right sweeper
+                    // Sharp left
+                    { start: 0.16, end: 0.21, rate: -0.16 },  // ~50° sharp left
+                    // Medium right with straight after
+                    { start: 0.26, end: 0.33, rate: 0.12 },   // ~55° right
+                    // Long sweeper left
+                    { start: 0.38, end: 0.48, rate: -0.05 },  // ~32° gentle left sweeper
+                    // Sharp right
+                    { start: 0.52, end: 0.57, rate: 0.15 },   // ~48° sharp right
+                    // Medium left
+                    { start: 0.62, end: 0.68, rate: -0.11 },  // ~42° left
+                    // Long sweeper right
+                    { start: 0.73, end: 0.83, rate: 0.055 },  // ~35° gentle right sweeper
+                    // Sharp left
+                    { start: 0.87, end: 0.92, rate: -0.13 },  // ~42° sharp left
+                    // Final gentle right to finish
+                    { start: 0.95, end: 0.99, rate: 0.06 },   // ~15° right to finish
                 ];
             } else if (layout === 'coastal') {
                 // 2x longer: Flowing coastal road with varying curves

@@ -2689,27 +2689,26 @@
             car.mesh.rotation.y = car.rotation;
 
             // Tilt car and camera forward when in the air so player can see the ground
-            let cameraTilt = 0;
+            if (car.airTilt === undefined) car.airTilt = 0;
+
             if (car.isJumping || car.position.y > 1.5) {
                 // Always tilt forward to see ground - more tilt when higher
                 const heightFactor = Math.min(1, (car.position.y - 1) / 10);
                 const targetTilt = 0.3 + heightFactor * 0.2;  // 0.3 to 0.5 radians forward tilt
                 // Smooth transition
-                if (!car.airTilt) car.airTilt = 0;
                 car.airTilt = car.airTilt * 0.9 + targetTilt * 0.1;
-                cameraTilt = car.airTilt;
             } else {
                 // Smoothly return to level when on ground
-                if (car.airTilt) car.airTilt *= 0.85;
-                cameraTilt = car.airTilt || 0;
+                car.airTilt *= 0.8;
+                if (Math.abs(car.airTilt) < 0.01) car.airTilt = 0;
             }
-            // Tilt car nose down (negative x) and camera looking down (positive x)
-            car.mesh.rotation.x = -cameraTilt;
+            // Tilt car nose down and camera looking down (negative = look down in Three.js)
+            car.mesh.rotation.x = car.airTilt;
 
             const cameraOffset = new THREE.Vector3(0, 1.5, 0.5);
             cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation);
             camera.position.copy(car.position).add(cameraOffset);
-            camera.rotation.x = cameraTilt;  // Positive = look down
+            camera.rotation.x = -car.airTilt;  // Negative = look down
             camera.rotation.y = car.rotation;
 
             // Check if reached finish line

@@ -1085,6 +1085,30 @@
             0x8800ff, // Purple
         ];
 
+        // Seeded random for multiplayer synchronization
+        let gameSeed = 0;
+        let seededRandomState = 0;
+
+        function setGameSeed(seed) {
+            gameSeed = seed;
+            seededRandomState = seed;
+        }
+
+        function seededRandom() {
+            // Simple LCG (Linear Congruential Generator)
+            seededRandomState = (seededRandomState * 1664525 + 1013904223) % 4294967296;
+            return seededRandomState / 4294967296;
+        }
+
+        function seedFromString(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            return Math.abs(hash);
+        }
+
         // ICE servers for WebRTC NAT traversal
         const peerConfig = {
             config: {
@@ -1213,6 +1237,7 @@
 
             peer.on('open', function(id) {
                 console.log('Join peer ready with ID:', id);
+                myPeerId = id; // Store our peer ID
                 // Connect to host with reliable option
                 conn = peer.connect('rapid-racing-' + code, { reliable: true });
 
@@ -1282,6 +1307,7 @@
                 if (data.type === 'position') {
                     // Store this player's position
                     if (!opponents[peerId]) {
+                        console.log('Host: creating opponent entry for', peerId);
                         opponents[peerId] = { data: {}, finishTime: null, car: null };
                     }
                     opponents[peerId].data = data;
@@ -1334,6 +1360,7 @@
                     // Position from another player (relayed by host) or from host
                     const odppId = data.peerId || 'host';
                     if (!opponents[odppId]) {
+                        console.log('Joiner: creating opponent entry for', odppId);
                         opponents[odppId] = { data: {}, finishTime: null, car: null };
                     }
                     opponents[odppId].data = data;
@@ -1360,8 +1387,12 @@
                                 gameInitialized = false;
                             }
                         }
+                        // Set seed for synchronized random (obstacles, etc.)
+                        if (data.seed !== undefined) {
+                            setGameSeed(data.seed);
+                        }
                         if (data.players) {
-                            // Create opponent cars for all other players
+                            // Create opponent entries for all other players
                             data.players.forEach(function(playerId) {
                                 if (playerId !== myPeerId) {
                                     opponents[playerId] = { data: {}, finishTime: null, car: null };
@@ -1518,6 +1549,10 @@
             const playerIds = Object.keys(connections);
             playerIds.push(myPeerId); // Include host
 
+            // Generate seed for synchronized random (obstacles, etc.)
+            const seed = seedFromString(currentRoomCode + gameSettings.trackLayout + Date.now());
+            setGameSeed(seed);
+
             broadcastToAll({
                 type: 'start',
                 settings: {
@@ -1525,7 +1560,8 @@
                     obstacleType: gameSettings.obstacleType,
                     trackLayout: gameSettings.trackLayout
                 },
-                players: playerIds
+                players: playerIds,
+                seed: seed
             });
 
             // Create opponent entries for all connected players
@@ -1545,9 +1581,12 @@
         }
 
         function createAllOpponentCars() {
+            console.log('createAllOpponentCars called, opponents:', Object.keys(opponents));
+            console.log('Scene exists:', !!scene);
             let colorIndex = 0;
             Object.keys(opponents).forEach(function(odppId) {
                 const color = PLAYER_COLORS[colorIndex % PLAYER_COLORS.length];
+                console.log('Creating opponent car for:', odppId, 'color:', color.toString(16));
                 opponents[odppId].car = createOpponentCar(color);
                 opponents[odppId].colorIndex = colorIndex;
                 colorIndex++;
@@ -1556,6 +1595,10 @@
 
         function createOpponentCar(color) {
             // Create a ghost-like opponent car
+            if (!scene) {
+                console.error('Cannot create opponent car: scene not initialized');
+                return null;
+            }
             const opponentGroup = new THREE.Group();
             color = color || 0x00ffff;
 
@@ -1608,10 +1651,14 @@
 
         function updateOpponentCar(odppId) {
             const opponent = opponents[odppId];
-            if (!opponent) return;
+            if (!opponent) {
+                console.log('updateOpponentCar: no opponent for', odppId);
+                return;
+            }
 
             // Create car if it doesn't exist yet
             if (!opponent.car && scene) {
+                console.log('updateOpponentCar: creating car on-demand for', odppId);
                 const colorIndex = Object.keys(opponents).indexOf(odppId);
                 const color = PLAYER_COLORS[colorIndex % PLAYER_COLORS.length];
                 opponent.car = createOpponentCar(color);
@@ -2763,7 +2810,9 @@
                 const perpZ = Math.sin(trackAngle);
 
                 // Random offset from center of track (reduced range for safety)
-                const lateralOffset = (Math.random() - 0.5) * (TRACK_WIDTH - 10);
+                // Use seeded random in multiplayer for synchronized obstacles
+                const randomVal = multiplayerActive ? seededRandom() : Math.random();
+                const lateralOffset = (randomVal - 0.5) * (TRACK_WIDTH - 10);
                 obstaclePositions.push({
                     x: p.x + perpX * lateralOffset,
                     z: p.z + perpZ * lateralOffset

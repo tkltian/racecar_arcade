@@ -715,7 +715,8 @@
             velocityY: 0,
             isJumping: false,
             onRamp: false,
-            wasColliding: false  // Track if we were already colliding (for one-time damage)
+            wasColliding: false,  // Track if we were already colliding (for one-time damage)
+            currentPadIndex: -1   // Track which pad car is on (-1 = none) to prevent repeated launches
         };
         let keys = {};
         let touchKeys = {};
@@ -2379,41 +2380,41 @@
                 return;
             }
 
-            for (const pad of ramps) {
-                const dx = car.position.x - pad.x;
-                const dz = car.position.z - pad.z;
-                const distance = Math.sqrt(dx * dx + dz * dz);
-
-                // Check if car is on the bounce pad
-                if (distance < pad.radius && car.position.y < 2) {
-                    // Launch the car upward! Height based on speed
-                    // Baby mode: 3x jump height for extra fun!
-                    const speedFactor = Math.max(0.3, car.speed / CAR_MAX_SPEED);
-                    const jumpMultiplier = gameSettings.difficulty === 'baby' ? 3 : 1;
-                    car.velocityY = JUMP_VELOCITY * 1.5 * speedFactor * jumpMultiplier;
-                    car.isJumping = true;
-                    car.onRamp = true; // Mark as on pad to prevent collision damage
-
-                    // Visual feedback - make arrows pulse (handled in animate)
-                    if (pad.mesh && pad.mesh.userData.arrowGroup) {
-                        pad.mesh.userData.bounceTime = Date.now();
-                    }
-                    break; // Only trigger one pad at a time
-                }
-            }
-
-            // Reset onRamp if not on any pad
-            let onAnyPad = false;
-            for (const pad of ramps) {
+            // Check which pad the car is currently on
+            let currentPadIdx = -1;
+            for (let i = 0; i < ramps.length; i++) {
+                const pad = ramps[i];
                 const dx = car.position.x - pad.x;
                 const dz = car.position.z - pad.z;
                 const distance = Math.sqrt(dx * dx + dz * dz);
                 if (distance < pad.radius) {
-                    onAnyPad = true;
+                    currentPadIdx = i;
                     break;
                 }
             }
-            if (!onAnyPad && car.position.y <= 1.1) {
+
+            // Only launch if entering a NEW pad (not the same one we're already on)
+            if (currentPadIdx !== -1 && currentPadIdx !== car.currentPadIndex && car.position.y < 2) {
+                const pad = ramps[currentPadIdx];
+                // Launch the car upward! Height based on speed
+                // Baby mode: 3x jump height for extra fun!
+                const speedFactor = Math.max(0.3, car.speed / CAR_MAX_SPEED);
+                const jumpMultiplier = gameSettings.difficulty === 'baby' ? 3 : 1;
+                car.velocityY = JUMP_VELOCITY * 1.5 * speedFactor * jumpMultiplier;
+                car.isJumping = true;
+                car.onRamp = true; // Mark as on pad to prevent collision damage
+
+                // Visual feedback - make arrows pulse (handled in animate)
+                if (pad.mesh && pad.mesh.userData.arrowGroup) {
+                    pad.mesh.userData.bounceTime = Date.now();
+                }
+            }
+
+            // Update current pad tracking
+            car.currentPadIndex = currentPadIdx;
+
+            // Reset onRamp if not on any pad and on ground
+            if (currentPadIdx === -1 && car.position.y <= 1.1) {
                 car.onRamp = false;
             }
         }
@@ -2764,6 +2765,7 @@
             car.isJumping = false;
             car.onRamp = false;
             car.wasColliding = false;
+            car.currentPadIndex = -1;
             carTrackIndex = 0; // Reset track progress
             gameTime = 0;
             gameStarted = false;

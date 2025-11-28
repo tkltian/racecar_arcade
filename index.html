@@ -1218,8 +1218,13 @@
                     opponentData = data;
                     updateOpponentCar();
                 } else if (data.type === 'start') {
-                    // Other player started the game
+                    // Other player (host) started the game - apply their settings
                     if (!gameStarted) {
+                        if (data.settings) {
+                            gameSettings.difficulty = data.settings.difficulty;
+                            gameSettings.obstacleType = data.settings.obstacleType;
+                            gameSettings.trackLayout = data.settings.trackLayout;
+                        }
                         startMultiplayerRace();
                     }
                 } else if (data.type === 'finish') {
@@ -1257,9 +1262,16 @@
         }
 
         function startMultiplayerGame() {
-            // Send start signal to opponent
+            // Send start signal with game settings to opponent
             if (conn && conn.open) {
-                conn.send({ type: 'start' });
+                conn.send({
+                    type: 'start',
+                    settings: {
+                        difficulty: gameSettings.difficulty,
+                        obstacleType: gameSettings.obstacleType,
+                        trackLayout: gameSettings.trackLayout
+                    }
+                });
             }
             startMultiplayerRace();
         }

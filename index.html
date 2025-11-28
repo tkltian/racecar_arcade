@@ -682,9 +682,11 @@
         const LABUBU_SECRET = { name: 'Secret', color: 0x1a1a1a, gradient: 0x444444, ringColor: 0xffd700 };
 
         function getRandomLabubuColor() {
-            const roll = Math.random() * 36;
-            if (roll < 1) {
-                // 1/36 chance for Secret black Labubu
+            // Roll 1-36 (inclusive) - only 1 is Secret
+            const roll = Math.floor(Math.random() * 36) + 1;
+            if (roll === 1) {
+                // 1/36 chance (~2.8%) for Secret black Labubu - very rare!
+                console.log('RARE! Secret Labubu appeared!');
                 return LABUBU_SECRET;
             } else {
                 // 35/36 chance divided among 6 colors

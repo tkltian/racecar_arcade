@@ -53,6 +53,64 @@
             max-width: 600px;
             line-height: 1.5;
         }
+        .track-picker {
+            margin-bottom: 30px;
+        }
+        .track-picker-label {
+            font-size: clamp(16px, 4vw, 20px);
+            color: #feca57;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .track-options {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .track-option {
+            padding: 15px 20px;
+            background: rgba(45, 45, 68, 0.8);
+            border: 3px solid #444;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+            font-size: clamp(14px, 3vw, 16px);
+            min-width: 100px;
+            text-align: center;
+        }
+        .track-option:hover {
+            border-color: #6c5ce7;
+            transform: translateY(-3px);
+        }
+        .track-option.selected {
+            background: linear-gradient(45deg, #6c5ce7, #a29bfe);
+            border-color: #a29bfe;
+            box-shadow: 0 5px 20px rgba(108,92,231,0.5);
+        }
+        .track-option .track-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        .track-preview {
+            width: 80px;
+            height: 80px;
+            background: rgba(20, 20, 35, 0.9);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .track-name {
+            font-size: 12px;
+            color: #ddd;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .track-option.selected .track-name {
+            color: white;
+            font-weight: bold;
+        }
         .menu-buttons {
             display: flex;
             gap: 20px;
@@ -298,6 +356,34 @@
             background: rgba(255,255,255,0.3);
         }
 
+        /* Minimap */
+        #minimap-container {
+            position: absolute;
+            top: 50px;
+            right: 10px;
+            width: 150px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+            z-index: 100;
+            display: none;
+            overflow: hidden;
+        }
+        #minimap-label {
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+        #minimap {
+            width: 100%;
+            height: 100%;
+        }
+
         /* Mobile Touch Controls */
         #touch-controls {
             display: none;
@@ -383,6 +469,35 @@
             Race through an exciting 3D track from the driver's seat!<br>
             Dodge obstacles, hit ramps to jump, and reach the finish line!
         </p>
+        <div class="track-picker">
+            <div class="track-picker-label">Select Track</div>
+            <div class="track-options">
+                <div class="track-option" data-track="classic" onclick="selectTrack('classic')">
+                    <canvas class="track-preview" id="preview-classic"></canvas>
+                    <div class="track-name">Classic</div>
+                </div>
+                <div class="track-option selected" data-track="serpentine" onclick="selectTrack('serpentine')">
+                    <canvas class="track-preview" id="preview-serpentine"></canvas>
+                    <div class="track-name">Serpentine</div>
+                </div>
+                <div class="track-option" data-track="zigzag" onclick="selectTrack('zigzag')">
+                    <canvas class="track-preview" id="preview-zigzag"></canvas>
+                    <div class="track-name">Zig-Zag</div>
+                </div>
+                <div class="track-option" data-track="spiral" onclick="selectTrack('spiral')">
+                    <canvas class="track-preview" id="preview-spiral"></canvas>
+                    <div class="track-name">Spiral</div>
+                </div>
+                <div class="track-option" data-track="hairpin" onclick="selectTrack('hairpin')">
+                    <canvas class="track-preview" id="preview-hairpin"></canvas>
+                    <div class="track-name">Hairpin</div>
+                </div>
+                <div class="track-option" data-track="insane" onclick="selectTrack('insane')">
+                    <canvas class="track-preview" id="preview-insane"></canvas>
+                    <div class="track-name">Insane</div>
+                </div>
+            </div>
+        </div>
         <div class="menu-buttons">
             <button class="menu-btn play-btn" onclick="startGame()">Play</button>
             <button class="menu-btn settings-btn" onclick="openSettings()">Settings</button>
@@ -458,6 +573,10 @@
         Press SPACE to restart | ESC for menu
     </div>
     <button id="back-btn" onclick="goToMenu()">Menu</button>
+    <div id="minimap-container">
+        <canvas id="minimap"></canvas>
+        <div id="minimap-label">Map</div>
+    </div>
     <div id="collision-flash"></div>
 
     <!-- Mobile Touch Controls -->
@@ -475,7 +594,8 @@
         let gameSettings = {
             trackLength: 'medium',
             difficulty: 'medium',
-            obstacleType: 'labubu'
+            obstacleType: 'labubu',
+            trackLayout: 'serpentine'
         };
 
         const TRACK_LENGTHS = {
@@ -618,6 +738,188 @@
             document.getElementById('settings-overlay').style.display = 'none';
         }
 
+        function selectTrack(track) {
+            gameSettings.trackLayout = track;
+            document.querySelectorAll('.track-option').forEach(opt => {
+                opt.classList.remove('selected');
+                if (opt.dataset.track === track) {
+                    opt.classList.add('selected');
+                }
+            });
+        }
+
+        function getTrackCurves(layout) {
+            if (layout === 'classic') {
+                return [
+                    { start: 0.12, end: 0.22, rate: 0.06 },
+                    { start: 0.32, end: 0.42, rate: -0.07 },
+                    { start: 0.55, end: 0.65, rate: 0.06 },
+                    { start: 0.75, end: 0.85, rate: -0.06 },
+                ];
+            } else if (layout === 'serpentine') {
+                return [
+                    { start: 0.06, end: 0.13, rate: 0.12 },
+                    { start: 0.17, end: 0.24, rate: -0.14 },
+                    { start: 0.28, end: 0.35, rate: 0.13 },
+                    { start: 0.40, end: 0.47, rate: -0.14 },
+                    { start: 0.52, end: 0.59, rate: 0.12 },
+                    { start: 0.64, end: 0.71, rate: -0.13 },
+                    { start: 0.76, end: 0.83, rate: 0.12 },
+                    { start: 0.88, end: 0.94, rate: -0.10 },
+                ];
+            } else if (layout === 'zigzag') {
+                return [
+                    { start: 0.08, end: 0.14, rate: 0.22 },
+                    { start: 0.20, end: 0.26, rate: -0.24 },
+                    { start: 0.32, end: 0.38, rate: 0.22 },
+                    { start: 0.44, end: 0.50, rate: -0.24 },
+                    { start: 0.56, end: 0.62, rate: 0.22 },
+                    { start: 0.68, end: 0.74, rate: -0.24 },
+                    { start: 0.80, end: 0.86, rate: 0.22 },
+                    { start: 0.91, end: 0.96, rate: -0.18 },
+                ];
+            } else if (layout === 'spiral') {
+                return [
+                    { start: 0.05, end: 0.45, rate: 0.08 },
+                    { start: 0.50, end: 0.55, rate: -0.15 },
+                    { start: 0.60, end: 0.95, rate: -0.07 },
+                ];
+            } else if (layout === 'hairpin') {
+                return [
+                    { start: 0.12, end: 0.22, rate: 0.45 },
+                    { start: 0.32, end: 0.42, rate: -0.45 },
+                    { start: 0.52, end: 0.62, rate: 0.45 },
+                    { start: 0.72, end: 0.82, rate: -0.45 },
+                    { start: 0.90, end: 0.96, rate: 0.25 },
+                ];
+            } else if (layout === 'insane') {
+                return [
+                    { start: 0.02, end: 0.09, rate: 0.35 },
+                    { start: 0.10, end: 0.17, rate: -0.40 },
+                    { start: 0.18, end: 0.25, rate: 0.38 },
+                    { start: 0.26, end: 0.33, rate: -0.42 },
+                    { start: 0.34, end: 0.41, rate: 0.40 },
+                    { start: 0.42, end: 0.49, rate: -0.38 },
+                    { start: 0.50, end: 0.57, rate: 0.42 },
+                    { start: 0.58, end: 0.65, rate: -0.40 },
+                    { start: 0.66, end: 0.73, rate: 0.38 },
+                    { start: 0.74, end: 0.81, rate: -0.42 },
+                    { start: 0.82, end: 0.89, rate: 0.35 },
+                    { start: 0.90, end: 0.97, rate: -0.30 },
+                ];
+            }
+            return [];
+        }
+
+        function generatePreviewWaypoints(layout) {
+            const waypoints = [];
+            const segmentLength = 25;
+            const numSegments = Math.ceil(1600 / segmentLength); // Use medium track length
+            let x = 0, z = 0, angle = 0;
+            const curves = getTrackCurves(layout);
+
+            function getTurnRate(progress) {
+                for (const curve of curves) {
+                    if (progress >= curve.start && progress < curve.end) {
+                        return curve.rate;
+                    }
+                }
+                return 0;
+            }
+
+            for (let i = 0; i <= numSegments; i++) {
+                waypoints.push({ x, z });
+                const progress = i / numSegments;
+                const turnRate = getTurnRate(progress);
+                angle += turnRate;
+                x += Math.sin(angle) * segmentLength;
+                z -= Math.cos(angle) * segmentLength;
+            }
+            return waypoints;
+        }
+
+        function drawTrackPreview(layout, canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width = 80;
+            const height = canvas.height = 80;
+
+            // Generate waypoints for this layout
+            const waypoints = generatePreviewWaypoints(layout);
+
+            // Find bounds
+            let minX = Infinity, maxX = -Infinity;
+            let minZ = Infinity, maxZ = -Infinity;
+            for (const wp of waypoints) {
+                minX = Math.min(minX, wp.x);
+                maxX = Math.max(maxX, wp.x);
+                minZ = Math.min(minZ, wp.z);
+                maxZ = Math.max(maxZ, wp.z);
+            }
+
+            // Add padding and calculate scale
+            const padding = 8;
+            const trackWidth = maxX - minX;
+            const trackHeight = maxZ - minZ;
+            const scaleX = (width - padding * 2) / (trackWidth || 1);
+            const scaleZ = (height - padding * 2) / (trackHeight || 1);
+            const scale = Math.min(scaleX, scaleZ);
+
+            // Center offset
+            const offsetX = (width - trackWidth * scale) / 2 - minX * scale;
+            const offsetZ = (height - trackHeight * scale) / 2 - minZ * scale;
+
+            // Clear canvas
+            ctx.fillStyle = 'rgba(20, 20, 35, 0.9)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw track
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            for (let i = 0; i < waypoints.length; i++) {
+                const x = waypoints[i].x * scale + offsetX;
+                const z = waypoints[i].z * scale + offsetZ;
+                if (i === 0) {
+                    ctx.moveTo(x, z);
+                } else {
+                    ctx.lineTo(x, z);
+                }
+            }
+            ctx.stroke();
+
+            // Draw start point (green)
+            const startX = waypoints[0].x * scale + offsetX;
+            const startZ = waypoints[0].z * scale + offsetZ;
+            ctx.fillStyle = '#2ecc71';
+            ctx.beginPath();
+            ctx.arc(startX, startZ, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw finish point (red)
+            const endWp = waypoints[waypoints.length - 1];
+            const endX = endWp.x * scale + offsetX;
+            const endZ = endWp.z * scale + offsetZ;
+            ctx.fillStyle = '#e74c3c';
+            ctx.beginPath();
+            ctx.arc(endX, endZ, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawAllTrackPreviews() {
+            const layouts = ['classic', 'serpentine', 'zigzag', 'spiral', 'hairpin', 'insane'];
+            layouts.forEach(layout => {
+                drawTrackPreview(layout, 'preview-' + layout);
+            });
+        }
+
+        // Draw track previews when page loads
+        document.addEventListener('DOMContentLoaded', drawAllTrackPreviews);
+
         function startGame() {
             document.getElementById('home-page').style.display = 'none';
             document.getElementById('game-container').style.display = 'block';
@@ -625,6 +927,7 @@
             document.getElementById('health-container').style.display = 'block';
             document.getElementById('instructions').style.display = 'block';
             document.getElementById('back-btn').style.display = 'block';
+            document.getElementById('minimap-container').style.display = 'block';
             if (isMobile) {
                 document.getElementById('touch-controls').style.display = 'block';
             }
@@ -648,6 +951,7 @@
             document.getElementById('back-btn').style.display = 'none';
             document.getElementById('message').style.display = 'none';
             document.getElementById('touch-controls').style.display = 'none';
+            document.getElementById('minimap-container').style.display = 'none';
             document.getElementById('home-page').style.display = 'flex';
         }
 
@@ -687,6 +991,7 @@
             car.velocityY = 0;
             car.isJumping = false;
             car.onRamp = false;
+            carTrackIndex = 0; // Reset track progress
             car.wasColliding = false;
 
             scene = new THREE.Scene();
@@ -770,29 +1075,108 @@
 
         // Track waypoints for curved path
         let trackWaypoints = [];
+        let smoothTrackPoints = []; // Smooth spline points for collision and minimap
+        let carTrackIndex = 0; // Track car's progress along the track (segment index)
 
         function generateTrackWaypoints() {
             trackWaypoints = [];
-            const segmentLength = 50;
+            // Use smaller segments for smoother curves
+            const segmentLength = 25;
             const numSegments = Math.ceil(TRACK_LENGTH / segmentLength);
             let x = 0, z = 0, angle = 0;
+
+            const layout = gameSettings.trackLayout;
+
+            // Helper: get turn rate based on progress through track
+            function getTurnRate(progress, curves) {
+                for (const curve of curves) {
+                    if (progress >= curve.start && progress < curve.end) {
+                        return curve.rate;
+                    }
+                }
+                return 0;
+            }
+
+            // Define curves: {start, end, rate} - rate is radians per segment
+            // For reference: 90° = 1.57 rad, 180° = 3.14 rad
+            let curves = [];
+
+            if (layout === 'classic') {
+                curves = [
+                    { start: 0.12, end: 0.22, rate: 0.06 },   // ~60° right
+                    { start: 0.32, end: 0.42, rate: -0.07 },  // ~70° left
+                    { start: 0.55, end: 0.65, rate: 0.06 },   // ~60° right
+                    { start: 0.75, end: 0.85, rate: -0.06 },  // ~60° left
+                ];
+            }
+            else if (layout === 'serpentine') {
+                curves = [
+                    { start: 0.06, end: 0.13, rate: 0.12 },   // ~90° right
+                    { start: 0.17, end: 0.24, rate: -0.14 },  // ~100° left
+                    { start: 0.28, end: 0.35, rate: 0.13 },   // ~90° right
+                    { start: 0.40, end: 0.47, rate: -0.14 },  // ~100° left
+                    { start: 0.52, end: 0.59, rate: 0.12 },   // ~90° right
+                    { start: 0.64, end: 0.71, rate: -0.13 },  // ~90° left
+                    { start: 0.76, end: 0.83, rate: 0.12 },   // ~90° right
+                    { start: 0.88, end: 0.94, rate: -0.10 },  // ~60° left
+                ];
+            }
+            else if (layout === 'zigzag') {
+                // Sharp 90°+ turns
+                curves = [
+                    { start: 0.08, end: 0.14, rate: 0.22 },   // ~120° right
+                    { start: 0.20, end: 0.26, rate: -0.24 },  // ~130° left
+                    { start: 0.32, end: 0.38, rate: 0.22 },   // ~120° right
+                    { start: 0.44, end: 0.50, rate: -0.24 },  // ~130° left
+                    { start: 0.56, end: 0.62, rate: 0.22 },   // ~120° right
+                    { start: 0.68, end: 0.74, rate: -0.24 },  // ~130° left
+                    { start: 0.80, end: 0.86, rate: 0.22 },   // ~120° right
+                    { start: 0.91, end: 0.96, rate: -0.18 },  // ~90° left
+                ];
+            }
+            else if (layout === 'spiral') {
+                curves = [
+                    { start: 0.05, end: 0.45, rate: 0.08 },   // Long spiral right
+                    { start: 0.50, end: 0.55, rate: -0.15 },  // Quick transition
+                    { start: 0.60, end: 0.95, rate: -0.07 },  // Long spiral left
+                ];
+            }
+            else if (layout === 'hairpin') {
+                // TRUE hairpin turns - 180° (π radians) each
+                // With segmentLength=25 and ~64 segments for medium track
+                // 10% of track = ~6.4 segments, need rate ~0.5 for 180°
+                curves = [
+                    { start: 0.12, end: 0.22, rate: 0.45 },   // ~180° hairpin right
+                    { start: 0.32, end: 0.42, rate: -0.45 },  // ~180° hairpin left
+                    { start: 0.52, end: 0.62, rate: 0.45 },   // ~180° hairpin right
+                    { start: 0.72, end: 0.82, rate: -0.45 },  // ~180° hairpin left
+                    { start: 0.90, end: 0.96, rate: 0.25 },   // Final curve
+                ];
+            }
+            else if (layout === 'insane') {
+                // Continuous very tight turns - almost no straights
+                curves = [
+                    { start: 0.02, end: 0.09, rate: 0.35 },
+                    { start: 0.10, end: 0.17, rate: -0.40 },
+                    { start: 0.18, end: 0.25, rate: 0.38 },
+                    { start: 0.26, end: 0.33, rate: -0.42 },
+                    { start: 0.34, end: 0.41, rate: 0.40 },
+                    { start: 0.42, end: 0.49, rate: -0.38 },
+                    { start: 0.50, end: 0.57, rate: 0.42 },
+                    { start: 0.58, end: 0.65, rate: -0.40 },
+                    { start: 0.66, end: 0.73, rate: 0.38 },
+                    { start: 0.74, end: 0.81, rate: -0.42 },
+                    { start: 0.82, end: 0.89, rate: 0.35 },
+                    { start: 0.90, end: 0.97, rate: -0.30 },
+                ];
+            }
 
             for (let i = 0; i <= numSegments; i++) {
                 trackWaypoints.push({ x, z, angle });
 
-                // Add curves at certain points
                 const progress = i / numSegments;
-                if (progress > 0.1 && progress < 0.2) {
-                    angle += 0.08; // Gentle right curve
-                } else if (progress > 0.25 && progress < 0.35) {
-                    angle -= 0.12; // Left curve
-                } else if (progress > 0.45 && progress < 0.55) {
-                    angle += 0.15; // Sharp right curve
-                } else if (progress > 0.6 && progress < 0.7) {
-                    angle -= 0.1; // Left curve
-                } else if (progress > 0.8 && progress < 0.9) {
-                    angle += 0.08; // Gentle right curve
-                }
+                const turnRate = getTurnRate(progress, curves);
+                angle += turnRate;
 
                 // Move forward in current direction
                 x += Math.sin(angle) * segmentLength;
@@ -803,7 +1187,7 @@
         }
 
         function getTrackPositionAt(distance) {
-            const segmentLength = 50;
+            const segmentLength = 25;
             const segmentIndex = Math.floor(distance / segmentLength);
             const segmentProgress = (distance % segmentLength) / segmentLength;
 
@@ -827,102 +1211,170 @@
         function createTrack() {
             generateTrackWaypoints();
 
-            const trackMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
-            const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const trackMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8, side: THREE.DoubleSide });
+            const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
 
-            // Create track segments following the waypoints
-            for (let i = 0; i < trackWaypoints.length - 1; i++) {
-                const wp1 = trackWaypoints[i];
-                const wp2 = trackWaypoints[i + 1];
+            // Create smooth spline curve from waypoints
+            const curvePoints = trackWaypoints.map(wp => new THREE.Vector3(wp.x, 0, wp.z));
+            const trackCurve = new THREE.CatmullRomCurve3(curvePoints, false, 'catmullrom', 0.5);
 
-                const dx = wp2.x - wp1.x;
-                const dz = wp2.z - wp1.z;
-                const segmentLength = Math.sqrt(dx * dx + dz * dz);
-                const segmentAngle = Math.atan2(dx, -dz);
+            // Sample many points along the smooth curve for rendering
+            const numSamples = trackWaypoints.length * 4;
+            const sampledPoints = trackCurve.getPoints(numSamples);
 
-                // Track segment
-                const segmentGeometry = new THREE.PlaneGeometry(TRACK_WIDTH, segmentLength + 1);
-                const segment = new THREE.Mesh(segmentGeometry, trackMaterial);
-                segment.rotation.x = -Math.PI / 2;
-                segment.rotation.z = -segmentAngle;
-                segment.position.set(
-                    (wp1.x + wp2.x) / 2,
-                    0,
-                    (wp1.z + wp2.z) / 2
-                );
-                segment.receiveShadow = true;
-                scene.add(segment);
+            // Store for collision detection and minimap
+            smoothTrackPoints = sampledPoints;
 
-                // Center line dashes
-                const numDashes = Math.floor(segmentLength / 20);
-                for (let d = 0; d < numDashes; d++) {
-                    const dashProgress = d / numDashes;
-                    const dashX = wp1.x + dx * dashProgress;
-                    const dashZ = wp1.z + dz * dashProgress;
+            // Create track ribbon geometry
+            const trackVertices = [];
+            const trackIndices = [];
+            const leftEdgePoints = [];
+            const rightEdgePoints = [];
 
-                    const dashGeometry = new THREE.PlaneGeometry(0.3, 8);
-                    const dash = new THREE.Mesh(dashGeometry, lineMaterial);
-                    dash.rotation.x = -Math.PI / 2;
-                    dash.rotation.z = -segmentAngle;
-                    dash.position.set(dashX, 0.01, dashZ);
-                    scene.add(dash);
+            for (let i = 0; i < sampledPoints.length; i++) {
+                const point = sampledPoints[i];
+
+                // Calculate direction (tangent) at this point
+                let tangent;
+                if (i < sampledPoints.length - 1) {
+                    tangent = new THREE.Vector3().subVectors(sampledPoints[i + 1], point).normalize();
+                } else {
+                    tangent = new THREE.Vector3().subVectors(point, sampledPoints[i - 1]).normalize();
                 }
 
-                // Side lines
-                const perpX = Math.cos(segmentAngle);
-                const perpZ = Math.sin(segmentAngle);
+                // Perpendicular vector (for track width)
+                const perpendicular = new THREE.Vector3(-tangent.z, 0, tangent.x);
 
-                // Left and right edge lines
-                const lineGeometry = new THREE.PlaneGeometry(0.5, segmentLength + 1);
-
-                const leftLine = new THREE.Mesh(lineGeometry, lineMaterial);
-                leftLine.rotation.x = -Math.PI / 2;
-                leftLine.rotation.z = -segmentAngle;
-                leftLine.position.set(
-                    (wp1.x + wp2.x) / 2 - perpX * (TRACK_WIDTH / 2 - 1),
-                    0.01,
-                    (wp1.z + wp2.z) / 2 - perpZ * (TRACK_WIDTH / 2 - 1)
+                // Left and right edge points
+                const leftPoint = new THREE.Vector3(
+                    point.x + perpendicular.x * TRACK_WIDTH / 2,
+                    0,
+                    point.z + perpendicular.z * TRACK_WIDTH / 2
                 );
-                scene.add(leftLine);
-
-                const rightLine = new THREE.Mesh(lineGeometry, lineMaterial);
-                rightLine.rotation.x = -Math.PI / 2;
-                rightLine.rotation.z = -segmentAngle;
-                rightLine.position.set(
-                    (wp1.x + wp2.x) / 2 + perpX * (TRACK_WIDTH / 2 - 1),
-                    0.01,
-                    (wp1.z + wp2.z) / 2 + perpZ * (TRACK_WIDTH / 2 - 1)
+                const rightPoint = new THREE.Vector3(
+                    point.x - perpendicular.x * TRACK_WIDTH / 2,
+                    0,
+                    point.z - perpendicular.z * TRACK_WIDTH / 2
                 );
-                scene.add(rightLine);
 
-                // Store wall segments for collision detection (no visual mesh needed)
+                leftEdgePoints.push(leftPoint);
+                rightEdgePoints.push(rightPoint);
+
+                // Add vertices (left, right)
+                trackVertices.push(leftPoint.x, 0, leftPoint.z);
+                trackVertices.push(rightPoint.x, 0, rightPoint.z);
+            }
+
+            // Create triangles connecting the vertices
+            for (let i = 0; i < sampledPoints.length - 1; i++) {
+                const bl = i * 2;      // bottom left
+                const br = i * 2 + 1;  // bottom right
+                const tl = (i + 1) * 2;     // top left
+                const tr = (i + 1) * 2 + 1; // top right
+
+                // Two triangles per quad
+                trackIndices.push(bl, br, tl);
+                trackIndices.push(br, tr, tl);
+            }
+
+            // Create the track mesh
+            const trackGeometry = new THREE.BufferGeometry();
+            trackGeometry.setAttribute('position', new THREE.Float32BufferAttribute(trackVertices, 3));
+            trackGeometry.setIndex(trackIndices);
+            trackGeometry.computeVertexNormals();
+
+            const trackMesh = new THREE.Mesh(trackGeometry, trackMaterial);
+            trackMesh.receiveShadow = true;
+            scene.add(trackMesh);
+
+            // Create smooth edge lines using tubes
+            const leftCurve = new THREE.CatmullRomCurve3(leftEdgePoints);
+            const rightCurve = new THREE.CatmullRomCurve3(rightEdgePoints);
+
+            const edgeLineMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+            const leftTube = new THREE.TubeGeometry(leftCurve, numSamples, 0.3, 4, false);
+            const leftLine = new THREE.Mesh(leftTube, edgeLineMaterial);
+            leftLine.position.y = 0.05;
+            scene.add(leftLine);
+
+            const rightTube = new THREE.TubeGeometry(rightCurve, numSamples, 0.3, 4, false);
+            const rightLine = new THREE.Mesh(rightTube, edgeLineMaterial);
+            rightLine.position.y = 0.05;
+            scene.add(rightLine);
+
+            // Center line dashes
+            for (let i = 0; i < sampledPoints.length; i += 8) {
+                if (i + 2 >= sampledPoints.length) break;
+
+                const p1 = sampledPoints[i];
+                const p2 = sampledPoints[Math.min(i + 2, sampledPoints.length - 1)];
+
+                const dx = p2.x - p1.x;
+                const dz = p2.z - p1.z;
+                const len = Math.sqrt(dx * dx + dz * dz);
+                const angle = Math.atan2(dx, -dz);
+
+                const dashGeometry = new THREE.PlaneGeometry(0.4, Math.min(len * 2, 6));
+                const dash = new THREE.Mesh(dashGeometry, lineMaterial);
+                dash.rotation.x = -Math.PI / 2;
+                dash.rotation.z = -angle;
+                dash.position.set(p1.x, 0.02, p1.z);
+                scene.add(dash);
+            }
+
+            // Store wall segments for collision detection using smooth curve points
+            for (let i = 0; i < sampledPoints.length - 1; i++) {
+                const p1 = sampledPoints[i];
+                const p2 = sampledPoints[i + 1];
+
+                let tangent = new THREE.Vector3().subVectors(p2, p1).normalize();
+                const perpX = -tangent.z;
+                const perpZ = tangent.x;
+
                 walls.push({
-                    x1: wp1.x - perpX * (TRACK_WIDTH / 2),
-                    z1: wp1.z - perpZ * (TRACK_WIDTH / 2),
-                    x2: wp2.x - perpX * (TRACK_WIDTH / 2),
-                    z2: wp2.z - perpZ * (TRACK_WIDTH / 2),
+                    x1: p1.x + perpX * TRACK_WIDTH / 2,
+                    z1: p1.z + perpZ * TRACK_WIDTH / 2,
+                    x2: p2.x + perpX * TRACK_WIDTH / 2,
+                    z2: p2.z + perpZ * TRACK_WIDTH / 2,
                     type: 'left'
                 });
                 walls.push({
-                    x1: wp1.x + perpX * (TRACK_WIDTH / 2),
-                    z1: wp1.z + perpZ * (TRACK_WIDTH / 2),
-                    x2: wp2.x + perpX * (TRACK_WIDTH / 2),
-                    z2: wp2.z + perpZ * (TRACK_WIDTH / 2),
+                    x1: p1.x - perpX * TRACK_WIDTH / 2,
+                    z1: p1.z - perpZ * TRACK_WIDTH / 2,
+                    x2: p2.x - perpX * TRACK_WIDTH / 2,
+                    z2: p2.z - perpZ * TRACK_WIDTH / 2,
                     type: 'right'
                 });
             }
 
-            // Large grass area
+            // Calculate bounds from track waypoints
+            let minX = 0, maxX = 0, minZ = 0, maxZ = 0;
+            trackWaypoints.forEach(wp => {
+                minX = Math.min(minX, wp.x);
+                maxX = Math.max(maxX, wp.x);
+                minZ = Math.min(minZ, wp.z);
+                maxZ = Math.max(maxZ, wp.z);
+            });
+
+            // Expand bounds for grass coverage
+            const padding = 300;
+            minX -= padding;
+            maxX += padding;
+            minZ -= padding;
+            maxZ += padding;
+
+            // Large grass tiles to cover entire track area
             const grassMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22 });
             const grassGeometry = new THREE.PlaneGeometry(500, 500);
-            const grass = new THREE.Mesh(grassGeometry, grassMaterial);
-            grass.rotation.x = -Math.PI / 2;
-            grass.position.set(0, -0.1, -TRACK_LENGTH / 2);
-            scene.add(grass);
 
-            // More grass tiles to cover the curved track area
-            for (let gx = -2; gx <= 2; gx++) {
-                for (let gz = -4; gz <= 1; gz++) {
+            const startGX = Math.floor(minX / 400) - 1;
+            const endGX = Math.ceil(maxX / 400) + 1;
+            const startGZ = Math.floor(minZ / 400) - 1;
+            const endGZ = Math.ceil(maxZ / 400) + 1;
+
+            for (let gx = startGX; gx <= endGX; gx++) {
+                for (let gz = startGZ; gz <= endGZ; gz++) {
                     const grassTile = new THREE.Mesh(grassGeometry, grassMaterial);
                     grassTile.rotation.x = -Math.PI / 2;
                     grassTile.position.set(gx * 400, -0.15, gz * 400);
@@ -938,27 +1390,142 @@
             car.mesh.position.copy(car.position);
             scene.add(car.mesh);
 
-            // Simple hood visible from driver's view
-            const hoodGeometry = new THREE.BoxGeometry(2.5, 0.3, 2.5);
-            const hoodMaterial = new THREE.MeshStandardMaterial({ color: 0x0066ff });
-            const hood = new THREE.Mesh(hoodGeometry, hoodMaterial);
-            hood.position.set(0, -0.3, -2.2);
-            car.mesh.add(hood);
+            const carColor = 0x0066ff;
+            const hoodMaterial = new THREE.MeshStandardMaterial({ color: carColor, metalness: 0.6, roughness: 0.4 });
+
+            // Main hood - curved shape using multiple parts
+            // Center hood section (slightly raised in middle)
+            const hoodCenterGeometry = new THREE.BoxGeometry(1.8, 0.25, 2.8);
+            const hoodCenter = new THREE.Mesh(hoodCenterGeometry, hoodMaterial);
+            hoodCenter.position.set(0, -0.25, -2.0);
+            car.mesh.add(hoodCenter);
+
+            // Hood bulge (gives it a muscle car look)
+            const bulgeMaterial = new THREE.MeshStandardMaterial({ color: carColor, metalness: 0.7, roughness: 0.3 });
+            const hoodBulgeGeometry = new THREE.CylinderGeometry(0.4, 0.5, 1.8, 16);
+            const hoodBulge = new THREE.Mesh(hoodBulgeGeometry, bulgeMaterial);
+            hoodBulge.rotation.x = Math.PI / 2;
+            hoodBulge.position.set(0, -0.1, -2.2);
+            hoodBulge.scale.set(1, 0.3, 1);
+            car.mesh.add(hoodBulge);
+
+            // Left side of hood (sloped down)
+            const hoodSideGeometry = new THREE.BoxGeometry(0.5, 0.2, 2.8);
+            const hoodLeftSide = new THREE.Mesh(hoodSideGeometry, hoodMaterial);
+            hoodLeftSide.position.set(-1.15, -0.35, -2.0);
+            hoodLeftSide.rotation.z = 0.15;
+            car.mesh.add(hoodLeftSide);
+
+            // Right side of hood (sloped down)
+            const hoodRightSide = new THREE.Mesh(hoodSideGeometry, hoodMaterial);
+            hoodRightSide.position.set(1.15, -0.35, -2.0);
+            hoodRightSide.rotation.z = -0.15;
+            car.mesh.add(hoodRightSide);
+
+            // Front edge of hood (curved down)
+            const frontEdgeGeometry = new THREE.BoxGeometry(2.4, 0.15, 0.3);
+            const frontEdge = new THREE.Mesh(frontEdgeGeometry, hoodMaterial);
+            frontEdge.position.set(0, -0.4, -3.4);
+            frontEdge.rotation.x = 0.3;
+            car.mesh.add(frontEdge);
+
+            // Headlights - sticking out from front
+            const headlightGeometry = new THREE.SphereGeometry(0.25, 16, 16);
+            const headlightMaterial = new THREE.MeshBasicMaterial({ color: 0xffffee });
+            const headlightRimMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8 });
+
+            // Left headlight
+            const leftHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+            leftHeadlight.position.set(-0.9, -0.35, -3.5);
+            leftHeadlight.scale.set(1, 0.7, 0.5);
+            car.mesh.add(leftHeadlight);
+
+            // Left headlight rim
+            const headlightRimGeometry = new THREE.TorusGeometry(0.22, 0.04, 8, 16);
+            const leftHeadlightRim = new THREE.Mesh(headlightRimGeometry, headlightRimMaterial);
+            leftHeadlightRim.position.set(-0.9, -0.35, -3.52);
+            leftHeadlightRim.scale.set(1, 0.7, 1);
+            car.mesh.add(leftHeadlightRim);
+
+            // Right headlight
+            const rightHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+            rightHeadlight.position.set(0.9, -0.35, -3.5);
+            rightHeadlight.scale.set(1, 0.7, 0.5);
+            car.mesh.add(rightHeadlight);
+
+            // Right headlight rim
+            const rightHeadlightRim = new THREE.Mesh(headlightRimGeometry, headlightRimMaterial);
+            rightHeadlightRim.position.set(0.9, -0.35, -3.52);
+            rightHeadlightRim.scale.set(1, 0.7, 1);
+            car.mesh.add(rightHeadlightRim);
 
             // Dashboard
-            const dashboardGeometry = new THREE.BoxGeometry(2.5, 0.4, 0.8);
-            const dashboardMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+            const dashboardGeometry = new THREE.BoxGeometry(2.6, 0.5, 1.0);
+            const dashboardMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 });
             const dashboard = new THREE.Mesh(dashboardGeometry, dashboardMaterial);
-            dashboard.position.set(0, -0.2, -0.8);
+            dashboard.position.set(0, -0.15, -0.7);
             car.mesh.add(dashboard);
 
+            // Dashboard top (padded look)
+            const dashTopGeometry = new THREE.BoxGeometry(2.4, 0.15, 0.6);
+            const dashTopMaterial = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.95 });
+            const dashTop = new THREE.Mesh(dashTopGeometry, dashTopMaterial);
+            dashTop.position.set(0, 0.15, -0.9);
+            dashTop.rotation.x = -0.2;
+            car.mesh.add(dashTop);
+
+            // Instrument cluster (gauges)
+            const instrumentGeometry = new THREE.BoxGeometry(0.7, 0.35, 0.05);
+            const instrumentMaterial = new THREE.MeshBasicMaterial({ color: 0x111111 });
+            const instruments = new THREE.Mesh(instrumentGeometry, instrumentMaterial);
+            instruments.position.set(0, 0.1, -1.1);
+            instruments.rotation.x = -0.4;
+            car.mesh.add(instruments);
+
+            // Speedometer dial
+            const dialGeometry = new THREE.CircleGeometry(0.12, 16);
+            const dialMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            const speedoDial = new THREE.Mesh(dialGeometry, dialMaterial);
+            speedoDial.position.set(-0.15, 0.12, -1.08);
+            speedoDial.rotation.x = -0.4;
+            car.mesh.add(speedoDial);
+
+            // Tach dial
+            const tachDial = new THREE.Mesh(dialGeometry, dialMaterial);
+            tachDial.position.set(0.15, 0.12, -1.08);
+            tachDial.rotation.x = -0.4;
+            car.mesh.add(tachDial);
+
             // Steering wheel
-            const wheelGeometry = new THREE.TorusGeometry(0.25, 0.04, 8, 16);
-            const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x111111 });
-            const steeringWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-            steeringWheel.position.set(0, 0.1, -0.6);
-            steeringWheel.rotation.x = Math.PI / 4;
+            const steeringWheelGeometry = new THREE.TorusGeometry(0.22, 0.035, 8, 24);
+            const steeringWheelMaterial = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+            const steeringWheel = new THREE.Mesh(steeringWheelGeometry, steeringWheelMaterial);
+            steeringWheel.position.set(0, 0.15, -0.55);
+            steeringWheel.rotation.x = Math.PI / 3.5;
             car.mesh.add(steeringWheel);
+
+            // Steering wheel spokes
+            const spokeMaterial = new THREE.MeshStandardMaterial({ color: 0x222222 });
+            const spokeGeometry = new THREE.BoxGeometry(0.03, 0.18, 0.03);
+
+            const spoke1 = new THREE.Mesh(spokeGeometry, spokeMaterial);
+            spoke1.position.set(0, 0.15, -0.55);
+            spoke1.rotation.x = Math.PI / 3.5;
+            car.mesh.add(spoke1);
+
+            const spoke2 = new THREE.Mesh(spokeGeometry, spokeMaterial);
+            spoke2.position.set(0, 0.15, -0.55);
+            spoke2.rotation.x = Math.PI / 3.5;
+            spoke2.rotation.z = Math.PI / 2;
+            car.mesh.add(spoke2);
+
+            // Steering wheel center hub
+            const hubGeometry = new THREE.CylinderGeometry(0.06, 0.06, 0.03, 16);
+            const hubMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.5 });
+            const hub = new THREE.Mesh(hubGeometry, hubMaterial);
+            hub.position.set(0, 0.15, -0.55);
+            hub.rotation.x = Math.PI / 2 - Math.PI / 3.5;
+            car.mesh.add(hub);
         }
 
         function createRamps() {
@@ -1084,21 +1651,45 @@
             const obstacleCount = Math.floor(TRACK_LENGTH / 50);
             const obstaclePositions = [];
 
-            // Place obstacles along the curved track
+            // Use smooth track points for obstacle placement
+            const points = smoothTrackPoints.length > 0 ? smoothTrackPoints : trackWaypoints;
+
+            // Calculate curvature at each point to avoid placing obstacles at tight turns
+            const curvatures = [];
+            for (let i = 1; i < points.length - 1; i++) {
+                const prev = points[i - 1];
+                const curr = points[i];
+                const next = points[i + 1];
+
+                // Calculate angle change (curvature indicator)
+                const angle1 = Math.atan2(curr.x - prev.x, curr.z - prev.z);
+                const angle2 = Math.atan2(next.x - curr.x, next.z - curr.z);
+                let angleDiff = Math.abs(angle2 - angle1);
+                if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+                curvatures[i] = angleDiff;
+            }
+            curvatures[0] = 0;
+            curvatures[points.length - 1] = 0;
+
+            // Place obstacles along the curved track, avoiding tight curves
             for (let i = 0; i < obstacleCount; i++) {
                 const trackProgress = (i + 0.5) / obstacleCount;
-                const waypointIndex = Math.floor(trackProgress * (trackWaypoints.length - 2)) + 1;
-                const wp = trackWaypoints[waypointIndex];
-                const nextWp = trackWaypoints[Math.min(waypointIndex + 1, trackWaypoints.length - 1)];
-                const trackAngle = Math.atan2(nextWp.x - wp.x, -(nextWp.z - wp.z));
+                const pointIndex = Math.floor(trackProgress * (points.length - 2)) + 1;
+
+                // Skip if this is a tight curve (curvature > threshold)
+                if (curvatures[pointIndex] > 0.15) continue;
+
+                const p = points[pointIndex];
+                const nextP = points[Math.min(pointIndex + 1, points.length - 1)];
+                const trackAngle = Math.atan2(nextP.x - p.x, -(nextP.z - p.z));
                 const perpX = Math.cos(trackAngle);
                 const perpZ = Math.sin(trackAngle);
 
-                // Random offset from center of track
-                const lateralOffset = (Math.random() - 0.5) * (TRACK_WIDTH - 6);
+                // Random offset from center of track (reduced range for safety)
+                const lateralOffset = (Math.random() - 0.5) * (TRACK_WIDTH - 10);
                 obstaclePositions.push({
-                    x: wp.x + perpX * lateralOffset,
-                    z: wp.z + perpZ * lateralOffset
+                    x: p.x + perpX * lateralOffset,
+                    z: p.z + perpZ * lateralOffset
                 });
             }
 
@@ -1664,15 +2255,20 @@
 
         // Check if a position is on the track
         function isOnTrack(x, z) {
-            // Find the closest point on the track centerline
+            // Find the closest point on the track centerline using smooth spline
             let minDist = Infinity;
 
-            for (let i = 0; i < trackWaypoints.length - 1; i++) {
-                const wp1 = trackWaypoints[i];
-                const wp2 = trackWaypoints[i + 1];
+            const points = smoothTrackPoints.length > 0 ? smoothTrackPoints : trackWaypoints;
+
+            for (let i = 0; i < points.length - 1; i++) {
+                const p1 = points[i];
+                const p2 = points[i + 1];
+
+                const x1 = p1.x, z1 = p1.z;
+                const x2 = p2.x, z2 = p2.z;
 
                 // Find closest point on this segment
-                const closest = closestPointOnSegment(x, z, wp1.x, wp1.z, wp2.x, wp2.z);
+                const closest = closestPointOnSegment(x, z, x1, z1, x2, z2);
                 const dx = x - closest.x;
                 const dz = z - closest.z;
                 const dist = Math.sqrt(dx * dx + dz * dz);
@@ -1732,10 +2328,20 @@
             } else {
                 // On ground: normal controls
                 if (isKeyPressed('ArrowUp')) {
-                    car.speed += CAR_ACCELERATION;
+                    // If moving backwards, accelerate forward at 1/10 rate
+                    if (car.speed < 0) {
+                        car.speed += CAR_ACCELERATION / 10;
+                    } else {
+                        car.speed += CAR_ACCELERATION;
+                    }
                 }
                 if (isKeyPressed('ArrowDown')) {
-                    car.speed -= CAR_BRAKE_FORCE;
+                    // If already moving backwards, reverse acceleration is 1/10 rate
+                    if (car.speed < 0) {
+                        car.speed -= CAR_BRAKE_FORCE / 10;
+                    } else {
+                        car.speed -= CAR_BRAKE_FORCE;
+                    }
                 }
             }
 
@@ -1768,8 +2374,15 @@
             checkRamps();
             updateCarPhysics();
 
-            // Only check collisions if not high in the air
-            if (car.position.y < 3) {
+            // Stop if game ended (e.g., landed off track) but update mesh first
+            if (gameOver || gameFinished) {
+                car.mesh.position.copy(car.position);
+                car.mesh.rotation.y = car.rotation;
+                return;
+            }
+
+            // Only check collisions if on the ground (not jumping)
+            if (car.position.y < 1.5 && !car.isJumping) {
                 checkCollisions(prevX, prevZ, moveX, moveZ);
             }
 
@@ -1818,29 +2431,62 @@
 
             const carRadius = CAR_HALF_WIDTH;
 
-            // Check wall segment collisions
-            for (const wall of walls) {
-                if (!wall.x1) continue; // Skip old-style walls
+            // Check track boundary using smooth spline centerline
+            // IMPORTANT: Only check segments near the car's current progress to avoid
+            // issues on hairpin tracks where different parts of track are close together
+            let minDist = Infinity;
+            let closestPoint = null;
+            let closestIndex = carTrackIndex;
+
+            const points = smoothTrackPoints.length > 0 ? smoothTrackPoints : trackWaypoints;
+
+            // Search window: check segments within a range of current position
+            // Allow more forward search than backward to handle normal progression
+            const searchBack = 30;
+            const searchForward = 60;
+            const startIdx = Math.max(0, carTrackIndex - searchBack);
+            const endIdx = Math.min(points.length - 1, carTrackIndex + searchForward);
+
+            for (let i = startIdx; i < endIdx; i++) {
+                const p1 = points[i];
+                const p2 = points[i + 1];
+
+                const x1 = p1.x, z1 = p1.z;
+                const x2 = p2.x, z2 = p2.z;
 
                 const closest = closestPointOnSegment(
                     car.position.x, car.position.z,
-                    wall.x1, wall.z1, wall.x2, wall.z2
+                    x1, z1, x2, z2
                 );
 
                 const dx = car.position.x - closest.x;
                 const dz = car.position.z - closest.z;
                 const dist = Math.sqrt(dx * dx + dz * dz);
 
-                if (dist < carRadius) {
-                    // Push car away from wall
-                    if (dist > 0.01) {
-                        const nx = dx / dist;
-                        const nz = dz / dist;
-                        car.position.x = closest.x + nx * carRadius;
-                        car.position.z = closest.z + nz * carRadius;
-                    }
-                    collided = true;
+                if (dist < minDist) {
+                    minDist = dist;
+                    closestPoint = closest;
+                    closestIndex = i;
                 }
+            }
+
+            // Update car's track index (only move forward, or allow small backward)
+            if (closestIndex > carTrackIndex || closestIndex >= carTrackIndex - 10) {
+                carTrackIndex = closestIndex;
+            }
+
+            // If car is outside track bounds, push it back toward centerline
+            const maxDist = TRACK_WIDTH / 2 - carRadius - 1;
+            if (minDist > maxDist && closestPoint) {
+                const dx = car.position.x - closestPoint.x;
+                const dz = car.position.z - closestPoint.z;
+                if (minDist > 0.01) {
+                    const nx = dx / minDist;
+                    const nz = dz / minDist;
+                    car.position.x = closestPoint.x + nx * maxDist;
+                    car.position.z = closestPoint.z + nz * maxDist;
+                }
+                collided = true;
             }
 
             // Check obstacle collisions
@@ -1868,8 +2514,9 @@
                 }
             });
 
-            // Prevent going backwards past start
-            if (car.position.z > 10) {
+            // Prevent going backwards past start - but only at the beginning of the race
+            // Don't apply this on hairpin tracks where the road doubles back past the start line
+            if (car.position.z > 10 && carTrackIndex < 20) {
                 car.position.z = 10;
                 collided = true;
             }
@@ -1947,6 +2594,7 @@
             car.isJumping = false;
             car.onRamp = false;
             car.wasColliding = false;
+            carTrackIndex = 0; // Reset track progress
             gameTime = 0;
             gameStarted = false;
             gameFinished = false;
@@ -2003,6 +2651,107 @@
         }
 
         let lastTime = 0;
+        function drawMinimap() {
+            const canvas = document.getElementById('minimap');
+            const ctx = canvas.getContext('2d');
+
+            // Set canvas resolution
+            canvas.width = 150;
+            canvas.height = 150;
+
+            // Clear canvas
+            ctx.fillStyle = 'rgba(0, 30, 0, 0.8)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (smoothTrackPoints.length === 0) return;
+
+            // Calculate track bounds
+            let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+            for (const p of smoothTrackPoints) {
+                minX = Math.min(minX, p.x);
+                maxX = Math.max(maxX, p.x);
+                minZ = Math.min(minZ, p.z);
+                maxZ = Math.max(maxZ, p.z);
+            }
+
+            // Add padding
+            const padding = 50;
+            minX -= padding;
+            maxX += padding;
+            minZ -= padding;
+            maxZ += padding;
+
+            // Scale to fit canvas
+            const scaleX = canvas.width / (maxX - minX);
+            const scaleZ = canvas.height / (maxZ - minZ);
+            const scale = Math.min(scaleX, scaleZ) * 0.9;
+
+            const offsetX = canvas.width / 2 - ((maxX + minX) / 2) * scale;
+            const offsetZ = canvas.height / 2 - ((maxZ + minZ) / 2) * scale;
+
+            // Transform function
+            const toCanvas = (x, z) => ({
+                x: x * scale + offsetX,
+                y: z * scale + offsetZ
+            });
+
+            // Draw track
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = Math.max(TRACK_WIDTH * scale * 0.8, 3);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            for (let i = 0; i < smoothTrackPoints.length; i++) {
+                const p = toCanvas(smoothTrackPoints[i].x, smoothTrackPoints[i].z);
+                if (i === 0) ctx.moveTo(p.x, p.y);
+                else ctx.lineTo(p.x, p.y);
+            }
+            ctx.stroke();
+
+            // Draw track center line (lighter)
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            for (let i = 0; i < smoothTrackPoints.length; i++) {
+                const p = toCanvas(smoothTrackPoints[i].x, smoothTrackPoints[i].z);
+                if (i === 0) ctx.moveTo(p.x, p.y);
+                else ctx.lineTo(p.x, p.y);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw start/finish
+            const start = toCanvas(smoothTrackPoints[0].x, smoothTrackPoints[0].z);
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(start.x - 3, start.y - 3, 6, 6);
+
+            const end = toCanvas(
+                smoothTrackPoints[smoothTrackPoints.length - 1].x,
+                smoothTrackPoints[smoothTrackPoints.length - 1].z
+            );
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(end.x - 3, end.y - 3, 6, 6);
+
+            // Draw car position
+            const carPos = toCanvas(car.position.x, car.position.z);
+            ctx.fillStyle = '#00aaff';
+            ctx.beginPath();
+            ctx.arc(carPos.x, carPos.y, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw car direction indicator
+            ctx.strokeStyle = '#00aaff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(carPos.x, carPos.y);
+            ctx.lineTo(
+                carPos.x + Math.sin(car.rotation) * 8,
+                carPos.y - Math.cos(car.rotation) * 8
+            );
+            ctx.stroke();
+        }
+
         function animate(currentTime) {
             animationId = requestAnimationFrame(animate);
             const delta = (currentTime - lastTime) / 1000;
@@ -2016,6 +2765,7 @@
             updateBouncePads();
             updateCar(delta);
             updateUI();
+            drawMinimap();
             renderer.render(scene, camera);
         }
     </script>

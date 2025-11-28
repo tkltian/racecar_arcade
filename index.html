@@ -822,7 +822,7 @@
         };
 
         // Fixed track length (medium)
-        const TRACK_LENGTH = 1600;
+        const TRACK_LENGTH = 2400;
 
         // Labubu colors based on Pop Mart "Big Into Energy" series
         // Secret (black) is rare: 1/36 probability
@@ -1059,6 +1059,7 @@
         let opponentCar = null;
         let opponentData = { x: 0, z: 0, rotation: 0, progress: 0 };
         let opponentFinishTime = null;
+        let isPenaltyActive = false;
 
         function generateRoomCode() {
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -1672,6 +1673,7 @@
                 opponentCar = null;
             }
             opponentFinishTime = null;
+            isPenaltyActive = false;
             // Keep connection alive if still connected
 
             document.getElementById('game-container').style.display = 'none';
@@ -3150,6 +3152,11 @@
         }
 
         function triggerOffTrackGameOver() {
+            if (multiplayerActive) {
+                // In multiplayer, respawn with penalty instead of game over
+                respawnWithPenalty('Landed off track!');
+                return;
+            }
             gameOver = true;
             gameFinished = true;
             const message = document.getElementById('message');
@@ -3160,7 +3167,7 @@
         }
 
         function updateCar(delta) {
-            if (!gameStarted || gameFinished || gameOver) return;
+            if (!gameStarted || gameFinished || gameOver || isPenaltyActive) return;
 
             const prevX = car.position.x;
             const prevZ = car.position.z;
@@ -3471,6 +3478,11 @@
         }
 
         function triggerGameOver() {
+            if (multiplayerActive) {
+                // In multiplayer, respawn with penalty instead of game over
+                respawnWithPenalty('Car destroyed!');
+                return;
+            }
             gameOver = true;
             gameFinished = true;
             const message = document.getElementById('message');
@@ -3478,6 +3490,59 @@
             message.innerHTML = `WASTED!<br><span style="font-size: 24px; color: #ff6b6b;">Your car is destroyed!</span><br><span style="font-size: 20px;">${restartHint}</span>`;
             message.style.display = 'block';
             message.style.color = '#ff0000';
+        }
+
+        function respawnWithPenalty(reason) {
+            if (isPenaltyActive) return; // Prevent multiple penalties
+            isPenaltyActive = true;
+
+            // Show penalty message
+            const message = document.getElementById('message');
+            message.innerHTML = `<span style="color: #ff6b6b;">${reason}</span><br><span style="font-size: 24px;">2 SEC PENALTY</span>`;
+            message.style.display = 'block';
+            message.style.color = '#ffff00';
+
+            // Find a safe respawn position on the track
+            // Use current progress to find nearby track point
+            const respawnIndex = Math.max(0, carTrackIndex - 5);
+            const trackPoint = trackPoints[respawnIndex];
+
+            // Reset car state
+            car.position.x = trackPoint.x;
+            car.position.z = trackPoint.z;
+            car.position.y = 1;
+            car.speed = 0;
+            car.velocityY = 0;
+            car.isJumping = false;
+            car.onRamp = false;
+            car.airTilt = 0;
+
+            // Calculate rotation to face track direction
+            if (respawnIndex < trackPoints.length - 1) {
+                const nextPoint = trackPoints[respawnIndex + 1];
+                car.rotation = Math.atan2(nextPoint.x - trackPoint.x, nextPoint.z - trackPoint.z);
+            }
+
+            // Reset health
+            health = MAX_HEALTH;
+            updateHealthBar();
+
+            // Update car mesh position
+            car.mesh.position.copy(car.position);
+            car.mesh.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation);
+
+            // Flash the car for 2 seconds
+            let flashCount = 0;
+            const flashInterval = setInterval(() => {
+                car.mesh.visible = !car.mesh.visible;
+                flashCount++;
+                if (flashCount >= 20) { // 20 flashes over 2 seconds (100ms each)
+                    clearInterval(flashInterval);
+                    car.mesh.visible = true;
+                    isPenaltyActive = false;
+                    message.style.display = 'none';
+                }
+            }, 100);
         }
 
         function finishGame() {
@@ -3534,6 +3599,7 @@
 
             // Reset multiplayer state for new race
             opponentFinishTime = null;
+            isPenaltyActive = false;
             if (opponentCar) {
                 opponentCar.position.set(0, 1, 2); // Slightly behind player
                 opponentCar.rotation.y = 0;

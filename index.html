@@ -26,14 +26,18 @@
         /* Home Page Styles */
         #home-page {
             width: 100vw;
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             color: white;
-            padding: 20px;
+            padding: 20px 20px 40px 20px;
+        }
+        body.menu-active {
+            overflow-y: auto;
+            touch-action: auto;
         }
         #home-page h1 {
             font-size: clamp(36px, 10vw, 72px);
@@ -470,15 +474,6 @@
         @media (max-width: 768px) {
             #instructions {
                 display: none !important;
-            }
-            body.menu-active {
-                overflow-y: auto;
-                touch-action: auto;
-            }
-            body.menu-active #home-page {
-                min-height: 100vh;
-                height: auto;
-                padding-bottom: 40px;
             }
         }
     </style>

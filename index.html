@@ -1109,33 +1109,16 @@
             return Math.abs(hash);
         }
 
-        // ICE servers for WebRTC NAT traversal (STUN + free TURN servers)
+        // ICE servers for WebRTC NAT traversal
         const peerConfig = {
             config: {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun.cloudflare.com:3478' },
-                    // Free TURN servers from Open Relay Project
-                    {
-                        urls: 'turn:openrelay.metered.ca:80',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    },
-                    {
-                        urls: 'turn:openrelay.metered.ca:443',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    },
-                    {
-                        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    }
-                ],
-                iceCandidatePoolSize: 10
+                    { urls: 'stun:stun2.l.google.com:19302' }
+                ]
             },
-            debug: 0 // Reduce debug overhead
+            debug: 0
         };
 
         function generateRoomCode() {

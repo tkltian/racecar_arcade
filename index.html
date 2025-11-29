@@ -1327,6 +1327,7 @@
             multiplayerActive = true;
 
             connection.on('data', function(data) {
+                try {
                 if (data.t === 'p') {
                     // Position update (using short field names)
                     if (!opponents[peerId]) {
@@ -1357,6 +1358,9 @@
                     data.peerId = peerId;
                     relayToOthers(peerId, data);
                 }
+                } catch (err) {
+                    console.error('Error in host data handler:', err);
+                }
             });
 
             // Close handler is registered early in peer.on('connection')
@@ -1371,10 +1375,11 @@
             console.log('Setting up joiner connection handlers');
 
             conn.on('data', function(data) {
-                // Update heartbeat on any data received
-                lastHeartbeat = Date.now();
+                try {
+                    // Update heartbeat on any data received
+                    lastHeartbeat = Date.now();
 
-                if (data.type === 'connected') {
+                    if (data.type === 'connected') {
                     // Host confirmed connection
                     console.log('Connection confirmed by host:', data.hostId);
                     // Start heartbeat only after confirmation
@@ -1443,6 +1448,9 @@
                         scene.remove(opponents[data.peerId].car);
                     }
                     delete opponents[data.peerId];
+                }
+                } catch (err) {
+                    console.error('Error in joiner data handler:', err);
                 }
             });
 

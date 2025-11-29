@@ -1183,15 +1183,23 @@
 
             peer.on('connection', function(connection) {
                 const peerId = connection.peer;
-                console.log('Incoming connection from:', peerId);
+                const connTime = Date.now();
+                console.log('[HOST ' + connTime + '] Incoming connection from:', peerId);
+                console.log('[HOST ' + connTime + '] Connection object state:', connection.open ? 'open' : 'not yet open');
+                console.log('[HOST ' + connTime + '] Connection type:', connection.type);
+                console.log('[HOST ' + connTime + '] Connection serialization:', connection.serialization);
 
                 connection.on('open', function() {
-                    console.log('Connection open from:', peerId);
+                    const openTime = Date.now();
+                    console.log('[HOST ' + openTime + '] Connection OPEN from:', peerId, '(took', openTime - connTime, 'ms)');
+                    console.log('[HOST ' + openTime + '] DataChannel ready state:', connection.dataChannel ? connection.dataChannel.readyState : 'no dataChannel');
+
                     connections[peerId] = connection;
                     setupHostConnection(connection, peerId);
                     updatePlayerCount();
 
                     // Send confirmation to joiner
+                    console.log('[HOST ' + Date.now() + '] Sending connected message to joiner');
                     connection.send({ type: 'connected', hostId: myPeerId });
 
                     // Show connected state (host sees start button)
@@ -1201,11 +1209,15 @@
                     document.getElementById('mp-joiner-controls').style.display = 'none';
 
                     // Notify all players about the new player count
+                    console.log('[HOST ' + Date.now() + '] Broadcasting playerCount');
                     broadcastToAll({ type: 'playerCount', count: getPlayerCount() });
+                    console.log('[HOST ' + Date.now() + '] Done with open handler');
                 });
 
                 connection.on('close', function() {
-                    console.log('Player disconnected:', peerId);
+                    const closeTime = Date.now();
+                    console.log('[HOST ' + closeTime + '] Connection CLOSED from:', peerId, '(was open for', closeTime - connTime, 'ms)');
+                    console.log('[HOST ' + closeTime + '] DataChannel state at close:', connection.dataChannel ? connection.dataChannel.readyState : 'no dataChannel');
                     delete connections[peerId];
                     if (opponents[peerId] && opponents[peerId].car && scene) {
                         scene.remove(opponents[peerId].car);
@@ -1217,7 +1229,11 @@
                 });
 
                 connection.on('error', function(err) {
-                    console.error('Connection error from ' + peerId + ':', err);
+                    console.error('[HOST ' + Date.now() + '] Connection ERROR from ' + peerId + ':', err);
+                });
+
+                connection.on('iceStateChanged', function(state) {
+                    console.log('[HOST ' + Date.now() + '] ICE state changed for ' + peerId + ':', state);
                 });
             });
 
@@ -1257,15 +1273,21 @@
                 console.log('Join peer ready with ID:', id);
                 myPeerId = id; // Store our peer ID
                 // Connect to host
+                const joinConnTime = Date.now();
                 conn = peer.connect('rapid-racing-' + code, { reliable: true });
+                console.log('[JOINER ' + joinConnTime + '] Created connection to host');
 
                 if (!conn) {
                     document.getElementById('join-status').textContent = 'Could not create connection.';
                     return;
                 }
 
+                console.log('[JOINER ' + joinConnTime + '] Connection object created, type:', conn.type, 'serialization:', conn.serialization);
+
                 conn.on('open', function() {
-                    console.log('Connected to host!');
+                    const openTime = Date.now();
+                    console.log('[JOINER ' + openTime + '] Connection OPEN to host (took', openTime - joinConnTime, 'ms)');
+                    console.log('[JOINER ' + openTime + '] DataChannel ready state:', conn.dataChannel ? conn.dataChannel.readyState : 'no dataChannel');
 
                     // Show connected state (joiner waits for host to start)
                     document.getElementById('mp-joining').style.display = 'none';
@@ -1274,11 +1296,15 @@
                     document.getElementById('mp-joiner-controls').style.display = 'block';
 
                     // Setup connection handlers
+                    console.log('[JOINER ' + Date.now() + '] Calling setupConnection()');
                     setupConnection();
+                    console.log('[JOINER ' + Date.now() + '] setupConnection() done');
                 });
 
                 conn.on('close', function() {
-                    console.log('Connection to host closed');
+                    const closeTime = Date.now();
+                    console.log('[JOINER ' + closeTime + '] Connection CLOSED (was open for', closeTime - joinConnTime, 'ms)');
+                    console.log('[JOINER ' + closeTime + '] DataChannel state at close:', conn.dataChannel ? conn.dataChannel.readyState : 'no dataChannel');
                     stopHeartbeat();
                     if (!gameStarted) {
                         document.getElementById('join-status').textContent = 'Disconnected from host.';
@@ -1291,8 +1317,12 @@
                 });
 
                 conn.on('error', function(err) {
-                    console.error('Connection error:', err);
+                    console.error('[JOINER ' + Date.now() + '] Connection ERROR:', err);
                     document.getElementById('join-status').textContent = 'Connection failed: ' + (err.type || err);
+                });
+
+                conn.on('iceStateChanged', function(state) {
+                    console.log('[JOINER ' + Date.now() + '] ICE state changed:', state);
                 });
 
                 // Add timeout for connection
@@ -1339,9 +1369,11 @@
         // Setup connection handler for HOST (handles multiple players)
         function setupHostConnection(connection, peerId) {
             multiplayerActive = true;
+            console.log('[HOST ' + Date.now() + '] setupHostConnection called for:', peerId);
 
             connection.on('data', function(data) {
                 try {
+                console.log('[HOST ' + Date.now() + '] Received data from', peerId + ':', data.type || data.t || 'unknown');
                 if (data.t === 'p') {
                     // Position update (using short field names)
                     if (!opponents[peerId]) {
@@ -1386,16 +1418,17 @@
             lastHeartbeat = Date.now();
             reconnectAttempts = 0;
 
-            console.log('Setting up joiner connection handlers');
+            console.log('[JOINER ' + Date.now() + '] Setting up joiner connection handlers');
 
             conn.on('data', function(data) {
                 try {
+                    console.log('[JOINER ' + Date.now() + '] Received data:', data.type || data.t || 'unknown');
                     // Update heartbeat on any data received
                     lastHeartbeat = Date.now();
 
                     if (data.type === 'connected') {
                     // Host confirmed connection
-                    console.log('Connection confirmed by host:', data.hostId);
+                    console.log('[JOINER ' + Date.now() + '] Connection confirmed by host:', data.hostId);
                     // Heartbeat disabled - was causing connection issues
                     // startHeartbeat();
                 } else if (data.type === 'ping') {

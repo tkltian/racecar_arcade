@@ -1072,8 +1072,8 @@
         let lastHeartbeat = 0;
         let reconnectAttempts = 0;
         const MAX_RECONNECT_ATTEMPTS = 5;
-        const HEARTBEAT_INTERVAL = 1000; // 1 second
-        const HEARTBEAT_TIMEOUT = 3000; // 3 seconds without heartbeat = disconnected
+        const HEARTBEAT_INTERVAL = 3000; // 3 seconds (reduced frequency for better performance)
+        const HEARTBEAT_TIMEOUT = 10000; // 10 seconds without heartbeat = disconnected
 
         // Colors for different players
         const PLAYER_COLORS = [
@@ -1303,20 +1303,17 @@
         function setupHostConnection(connection, peerId) {
             multiplayerActive = true;
 
-            let hostReceivedCount = 0;
             connection.on('data', function(data) {
-                if (data.type === 'position') {
-                    if (hostReceivedCount++ < 5) console.log('Host received position from', peerId, 'at', data.x.toFixed(1), data.z.toFixed(1));
-                    // Store this player's position
+                if (data.t === 'p') {
+                    // Position update (using short field names)
                     if (!opponents[peerId]) {
-                        console.log('Host: creating opponent entry for', peerId);
                         opponents[peerId] = { data: {}, finishTime: null, car: null };
                     }
-                    opponents[peerId].data = data;
+                    opponents[peerId].data = { x: data.x, z: data.z, y: data.y, rotation: data.r };
                     updateOpponentCar(peerId);
 
-                    // Relay to all other players (include sender's peerId)
-                    data.peerId = peerId;
+                    // Relay to all other players
+                    data.id = peerId;
                     relayToOthers(peerId, data);
                 } else if (data.type === 'finish') {
                     // Player finished
@@ -1358,16 +1355,13 @@
                 // Update heartbeat on any data received
                 lastHeartbeat = Date.now();
 
-                if (data.type === 'position') {
-                    // Position from another player (relayed by host) or from host
-                    const odppId = data.peerId || 'host';
-                    if (!window.joinerReceivedCount) window.joinerReceivedCount = 0;
-                    if (window.joinerReceivedCount++ < 5) console.log('Joiner received position from', odppId, 'at', data.x.toFixed(1), data.z.toFixed(1));
+                if (data.t === 'p') {
+                    // Position update from host or relayed from other player
+                    const odppId = data.id || 'host';
                     if (!opponents[odppId]) {
-                        console.log('Joiner: creating opponent entry for', odppId);
                         opponents[odppId] = { data: {}, finishTime: null, car: null };
                     }
-                    opponents[odppId].data = data;
+                    opponents[odppId].data = { x: data.x, z: data.z, y: data.y, rotation: data.r };
                     updateOpponentCar(odppId);
                 } else if (data.type === 'heartbeat') {
                     // Respond to heartbeat
@@ -1379,12 +1373,8 @@
                     lastHeartbeat = Date.now();
                 } else if (data.type === 'start') {
                     // Host started the game - apply their settings
-                    console.log('Joiner received START message:', data);
-                    console.log('My peer ID:', myPeerId);
-                    console.log('Players in message:', data.players);
                     if (!gameStarted) {
                         if (data.settings) {
-                            console.log('Applying host settings:', data.settings);
                             gameSettings.difficulty = data.settings.difficulty;
                             gameSettings.obstacleType = data.settings.obstacleType;
                             gameSettings.trackLayout = data.settings.trackLayout;
@@ -1556,15 +1546,9 @@
             const playerIds = Object.keys(connections);
             playerIds.push(myPeerId); // Include host
 
-            console.log('Host starting game');
-            console.log('My peer ID (host):', myPeerId);
-            console.log('Connected players:', Object.keys(connections));
-            console.log('All player IDs:', playerIds);
-
             // Generate seed for synchronized random (obstacles, etc.)
-            const seed = seedFromString(currentRoomCode + gameSettings.trackLayout + Date.now());
+            const seed = seedFromString(currentRoomCode + gameSettings.trackLayout);
             setGameSeed(seed);
-            console.log('Game seed:', seed);
 
             broadcastToAll({
                 type: 'start',
@@ -1594,12 +1578,9 @@
         }
 
         function createAllOpponentCars() {
-            console.log('createAllOpponentCars called, opponents:', Object.keys(opponents));
-            console.log('Scene exists:', !!scene);
             let colorIndex = 0;
             Object.keys(opponents).forEach(function(odppId) {
                 const color = PLAYER_COLORS[colorIndex % PLAYER_COLORS.length];
-                console.log('Creating opponent car for:', odppId, 'color:', color.toString(16));
                 opponents[odppId].car = createOpponentCar(color);
                 opponents[odppId].colorIndex = colorIndex;
                 colorIndex++;
@@ -1608,10 +1589,7 @@
 
         function createOpponentCar(color) {
             // Create a ghost-like opponent car
-            if (!scene) {
-                console.error('Cannot create opponent car: scene not initialized');
-                return null;
-            }
+            if (!scene) return null;
             const opponentGroup = new THREE.Group();
             color = color || 0x00ffff;
 
@@ -1664,14 +1642,10 @@
 
         function updateOpponentCar(odppId) {
             const opponent = opponents[odppId];
-            if (!opponent) {
-                console.log('updateOpponentCar: no opponent for', odppId);
-                return;
-            }
+            if (!opponent) return;
 
             // Create car if it doesn't exist yet
             if (!opponent.car && scene) {
-                console.log('updateOpponentCar: creating car on-demand for', odppId);
                 const colorIndex = Object.keys(opponents).indexOf(odppId);
                 const color = PLAYER_COLORS[colorIndex % PLAYER_COLORS.length];
                 opponent.car = createOpponentCar(color);
@@ -1685,28 +1659,23 @@
             }
         }
 
-        let positionUpdateCount = 0;
         function sendPositionUpdate() {
             if (!multiplayerActive || !gameStarted || gameFinished) return;
 
+            // Minimal position data for efficiency
             const posData = {
-                type: 'position',
+                t: 'p', // 'p' for position (shorter than 'position')
                 x: car.position.x,
                 z: car.position.z,
                 y: car.position.y,
-                rotation: car.rotation,
-                progress: car.progress,
-                peerId: myPeerId
+                r: car.rotation,
+                id: myPeerId
             };
 
             if (isHost) {
-                // Host broadcasts to all players
                 broadcastToAll(posData);
-                if (positionUpdateCount++ < 5) console.log('Host sending position to', Object.keys(connections).length, 'players');
             } else if (conn && conn.open) {
-                // Joiner sends to host
                 conn.send(posData);
-                if (positionUpdateCount++ < 5) console.log('Joiner sending position to host');
             }
         }
 
@@ -4277,9 +4246,9 @@
             updateUI();
             drawMinimap();
 
-            // Send multiplayer position updates (throttled to ~20 times/sec)
+            // Send multiplayer position updates (throttled to ~10 times/sec for performance)
             if (multiplayerActive && gameStarted && !gameFinished) {
-                if (!window.lastPositionUpdate || currentTime - window.lastPositionUpdate > 50) {
+                if (!window.lastPositionUpdate || currentTime - window.lastPositionUpdate > 100) {
                     sendPositionUpdate();
                     window.lastPositionUpdate = currentTime;
                 }

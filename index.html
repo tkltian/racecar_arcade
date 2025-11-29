@@ -1109,9 +1109,10 @@
             return Math.abs(hash);
         }
 
-        // Use PeerJS defaults for ICE - custom config was causing issues
+        // PeerJS configuration
         const peerConfig = {
-            debug: 1 // Low debug to see connection issues
+            debug: 1,
+            serialization: 'json' // Use JSON serialization for reliability
         };
 
         function generateRoomCode() {

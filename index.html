@@ -1109,16 +1109,15 @@
             return Math.abs(hash);
         }
 
-        // ICE servers for WebRTC NAT traversal
+        // ICE servers for WebRTC NAT traversal (STUN only - TURN caused issues)
         const peerConfig = {
             config: {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' }
+                    { urls: 'stun:stun1.l.google.com:19302' }
                 ]
             },
-            debug: 0
+            debug: 2 // Enable debug logging to see connection details
         };
 
         function generateRoomCode() {
@@ -1185,6 +1184,29 @@
                 const peerId = connection.peer;
                 console.log('Incoming connection from:', peerId);
 
+                // Register close handler early to catch any immediate disconnections
+                connection.on('close', function() {
+                    console.log('Player disconnected (early handler):', peerId);
+                    delete connections[peerId];
+                    if (opponents[peerId] && opponents[peerId].car && scene) {
+                        scene.remove(opponents[peerId].car);
+                    }
+                    delete opponents[peerId];
+                    updatePlayerCount();
+                    broadcastToAll({ type: 'playerCount', count: getPlayerCount() });
+                    broadcastToAll({ type: 'playerLeft', peerId: peerId });
+                });
+
+                // Monitor the underlying WebRTC connection state
+                if (connection.peerConnection) {
+                    connection.peerConnection.oniceconnectionstatechange = function() {
+                        console.log('ICE state for', peerId + ':', connection.peerConnection.iceConnectionState);
+                    };
+                    connection.peerConnection.onconnectionstatechange = function() {
+                        console.log('Connection state for', peerId + ':', connection.peerConnection.connectionState);
+                    };
+                }
+
                 connection.on('open', function() {
                     console.log('Connection open from:', peerId);
                     connections[peerId] = connection;
@@ -1192,16 +1214,11 @@
                     updatePlayerCount();
 
                     // Send confirmation to joiner that connection is established
-                    connection.send({ type: 'connected', hostId: myPeerId });
-
-                    // Start keep-alive ping to prevent connection timeout
-                    const keepAlive = setInterval(function() {
+                    setTimeout(function() {
                         if (connection && connection.open) {
-                            connection.send({ type: 'ping' });
-                        } else {
-                            clearInterval(keepAlive);
+                            connection.send({ type: 'connected', hostId: myPeerId });
                         }
-                    }, 1000);
+                    }, 100);
 
                     // Show connected state (host sees start button)
                     document.getElementById('mp-hosting').style.display = 'none';
@@ -1257,24 +1274,43 @@
                     return;
                 }
 
+                // Register close handler early to catch any immediate disconnections
+                conn.on('close', function() {
+                    console.log('Connection to host closed (early handler)');
+                    stopHeartbeat();
+                    if (!gameStarted) {
+                        document.getElementById('join-status').textContent = 'Disconnected from host.';
+                        document.getElementById('mp-joining').style.display = 'block';
+                        document.getElementById('mp-connected').style.display = 'none';
+                    } else if (!gameFinished) {
+                        attemptReconnect();
+                    }
+                    multiplayerActive = false;
+                });
+
+                // Monitor ICE connection state on joiner side
+                setTimeout(function() {
+                    if (conn && conn.peerConnection) {
+                        conn.peerConnection.oniceconnectionstatechange = function() {
+                            console.log('Joiner ICE state:', conn.peerConnection.iceConnectionState);
+                        };
+                        conn.peerConnection.onconnectionstatechange = function() {
+                            console.log('Joiner connection state:', conn.peerConnection.connectionState);
+                        };
+                    }
+                }, 100);
+
                 conn.on('open', function() {
                     console.log('Connected to host!');
-                    setupConnection();
 
                     // Show connected state (joiner waits for host to start)
                     document.getElementById('mp-joining').style.display = 'none';
                     document.getElementById('mp-connected').style.display = 'block';
                     document.getElementById('mp-host-controls').style.display = 'none';
                     document.getElementById('mp-joiner-controls').style.display = 'block';
-                });
 
-                conn.on('close', function() {
-                    console.log('Connection to host closed');
-                    if (!gameStarted) {
-                        document.getElementById('join-status').textContent = 'Disconnected from host.';
-                        document.getElementById('mp-joining').style.display = 'block';
-                        document.getElementById('mp-connected').style.display = 'none';
-                    }
+                    // Setup connection handlers immediately
+                    setupConnection();
                 });
 
                 conn.on('error', function(err) {
@@ -1288,7 +1324,7 @@
                         document.getElementById('join-status').textContent = 'Connection timed out. Check the code and try again.';
                         conn.close();
                     }
-                }, 10000);
+                }, 15000);
             });
 
             peer.on('error', function(err) {
@@ -1356,17 +1392,7 @@
                 }
             });
 
-            connection.on('close', function() {
-                console.log('Player disconnected:', peerId);
-                delete connections[peerId];
-                if (opponents[peerId] && opponents[peerId].car && scene) {
-                    scene.remove(opponents[peerId].car);
-                }
-                delete opponents[peerId];
-                updatePlayerCount();
-                broadcastToAll({ type: 'playerCount', count: getPlayerCount() });
-                broadcastToAll({ type: 'playerLeft', peerId: peerId });
-            });
+            // Close handler is registered early in peer.on('connection')
         }
 
         // Setup connection handler for JOINER (connects to host)
@@ -1375,8 +1401,7 @@
             lastHeartbeat = Date.now();
             reconnectAttempts = 0;
 
-            // Start heartbeat
-            startHeartbeat();
+            console.log('Setting up joiner connection handlers');
 
             conn.on('data', function(data) {
                 // Update heartbeat on any data received
@@ -1385,6 +1410,8 @@
                 if (data.type === 'connected') {
                     // Host confirmed connection
                     console.log('Connection confirmed by host:', data.hostId);
+                    // Start heartbeat only after confirmation
+                    startHeartbeat();
                 } else if (data.type === 'ping') {
                     // Respond to keep-alive ping
                     if (conn && conn.open) {
@@ -1452,24 +1479,7 @@
                 }
             });
 
-            conn.on('close', function() {
-                console.log('Connection closed');
-                stopHeartbeat();
-
-                if (gameStarted && !gameFinished) {
-                    // Try to reconnect during active game
-                    attemptReconnect();
-                } else {
-                    multiplayerActive = false;
-                }
-            });
-
-            conn.on('error', function(err) {
-                console.error('Connection error:', err);
-                if (gameStarted && !gameFinished) {
-                    attemptReconnect();
-                }
-            });
+            // Close and error handlers are registered early in joinGame
         }
 
         function startHeartbeat() {
@@ -1530,11 +1540,12 @@
                 } else {
                     // Joiner tries to reconnect to host
                     if (peer && currentRoomCode) {
-                        conn = peer.connect('rapid-racing-' + currentRoomCode, { reliable: true });
+                        conn = peer.connect('rapid-racing-' + currentRoomCode);
                         if (conn) {
                             conn.on('open', function() {
                                 console.log('Reconnected!');
                                 msg.style.display = 'none';
+                                reconnectAttempts = 0;
                                 setupConnection();
                             });
                             conn.on('error', function() {

@@ -1145,8 +1145,9 @@
         function closeMultiplayerLobby() {
             document.getElementById('multiplayer-lobby').style.display = 'none';
             document.getElementById('multiplayer-overlay').style.display = 'none';
-            // Clean up peer if not connected
-            if (peer && !conn) {
+            // Only clean up peer if NOT in multiplayer mode (no connections)
+            // Host uses 'connections' object, joiner uses 'conn'
+            if (peer && !conn && Object.keys(connections).length === 0 && !multiplayerActive) {
                 peer.destroy();
                 peer = null;
             }

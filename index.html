@@ -1243,7 +1243,11 @@
             });
 
             peer.on('disconnected', function() {
-                console.log('Host peer disconnected from signaling server');
+                console.log('Host peer disconnected from signaling server - attempting reconnect');
+                // Auto-reconnect to signaling server
+                if (peer && !peer.destroyed) {
+                    peer.reconnect();
+                }
             });
         }
 
@@ -1346,7 +1350,11 @@
             });
 
             peer.on('disconnected', function() {
-                console.log('Joiner peer disconnected from signaling server');
+                console.log('Joiner peer disconnected from signaling server - attempting reconnect');
+                // Auto-reconnect to signaling server
+                if (peer && !peer.destroyed) {
+                    peer.reconnect();
+                }
             });
         }
 

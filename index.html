@@ -1192,6 +1192,9 @@
                     setupHostConnection(connection, peerId);
                     updatePlayerCount();
 
+                    // Send confirmation to joiner that connection is established
+                    connection.send({ type: 'connected', hostId: myPeerId });
+
                     // Show connected state (host sees start button)
                     document.getElementById('mp-hosting').style.display = 'none';
                     document.getElementById('mp-connected').style.display = 'block';
@@ -1238,8 +1241,8 @@
             peer.on('open', function(id) {
                 console.log('Join peer ready with ID:', id);
                 myPeerId = id; // Store our peer ID
-                // Connect to host with reliable option
-                conn = peer.connect('rapid-racing-' + code, { reliable: true });
+                // Connect to host
+                conn = peer.connect('rapid-racing-' + code);
 
                 if (!conn) {
                     document.getElementById('join-status').textContent = 'Could not create connection.';
@@ -1257,9 +1260,18 @@
                     document.getElementById('mp-joiner-controls').style.display = 'block';
                 });
 
+                conn.on('close', function() {
+                    console.log('Connection to host closed');
+                    if (!gameStarted) {
+                        document.getElementById('join-status').textContent = 'Disconnected from host.';
+                        document.getElementById('mp-joining').style.display = 'block';
+                        document.getElementById('mp-connected').style.display = 'none';
+                    }
+                });
+
                 conn.on('error', function(err) {
                     console.error('Connection error:', err);
-                    document.getElementById('join-status').textContent = 'Connection failed. Try again.';
+                    document.getElementById('join-status').textContent = 'Connection failed: ' + (err.type || err);
                 });
 
                 // Add timeout for connection
@@ -1315,6 +1327,11 @@
                     // Relay to all other players
                     data.id = peerId;
                     relayToOthers(peerId, data);
+                } else if (data.type === 'heartbeat') {
+                    // Respond to heartbeat from joiner
+                    if (connection && connection.open) {
+                        connection.send({ type: 'heartbeat-ack' });
+                    }
                 } else if (data.type === 'finish') {
                     // Player finished
                     if (!opponents[peerId]) {
@@ -1355,7 +1372,10 @@
                 // Update heartbeat on any data received
                 lastHeartbeat = Date.now();
 
-                if (data.t === 'p') {
+                if (data.type === 'connected') {
+                    // Host confirmed connection
+                    console.log('Connection confirmed by host:', data.hostId);
+                } else if (data.t === 'p') {
                     // Position update from host or relayed from other player
                     const odppId = data.id || 'host';
                     if (!opponents[odppId]) {

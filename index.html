@@ -1211,6 +1211,15 @@
                     // Send confirmation to joiner that connection is established
                     connection.send({ type: 'connected', hostId: myPeerId });
 
+                    // Start keep-alive ping to prevent connection timeout
+                    const keepAlive = setInterval(function() {
+                        if (connection && connection.open) {
+                            connection.send({ type: 'ping' });
+                        } else {
+                            clearInterval(keepAlive);
+                        }
+                    }, 1000);
+
                     // Show connected state (host sees start button)
                     document.getElementById('mp-hosting').style.display = 'none';
                     document.getElementById('mp-connected').style.display = 'block';
@@ -1348,6 +1357,8 @@
                     if (connection && connection.open) {
                         connection.send({ type: 'heartbeat-ack' });
                     }
+                } else if (data.type === 'pong') {
+                    // Keep-alive response received - connection is healthy
                 } else if (data.type === 'finish') {
                     // Player finished
                     if (!opponents[peerId]) {
@@ -1391,6 +1402,11 @@
                 if (data.type === 'connected') {
                     // Host confirmed connection
                     console.log('Connection confirmed by host:', data.hostId);
+                } else if (data.type === 'ping') {
+                    // Respond to keep-alive ping
+                    if (conn && conn.open) {
+                        conn.send({ type: 'pong' });
+                    }
                 } else if (data.t === 'p') {
                     // Position update from host or relayed from other player
                     const odppId = data.id || 'host';

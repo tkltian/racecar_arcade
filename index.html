@@ -1578,6 +1578,15 @@
         }
 
         function createAllOpponentCars() {
+            // Safety check - make sure we have opponents and scene
+            if (Object.keys(opponents).length === 0) {
+                console.warn('No opponents to create cars for');
+                return;
+            }
+            if (!scene) {
+                console.warn('Scene not ready for opponent cars');
+                return;
+            }
             let colorIndex = 0;
             Object.keys(opponents).forEach(function(odppId) {
                 const color = PLAYER_COLORS[colorIndex % PLAYER_COLORS.length];
@@ -1585,6 +1594,7 @@
                 opponents[odppId].colorIndex = colorIndex;
                 colorIndex++;
             });
+            console.log('Created', Object.keys(opponents).length, 'opponent car(s)');
         }
 
         function createOpponentCar(color) {
@@ -3569,8 +3579,13 @@
         }
 
         function triggerOffTrackGameOver() {
-            // Respawn with penalty instead of game over
-            respawnWithPenalty('Landed off track!');
+            if (multiplayerActive) {
+                // Multiplayer: Respawn at current position with penalty
+                respawnWithPenalty('Landed off track!');
+            } else {
+                // Solo: Full restart at starting line
+                triggerSoloGameOver('Landed off track!');
+            }
         }
 
         function updateCar(delta) {
@@ -3885,8 +3900,23 @@
         }
 
         function triggerGameOver() {
-            // Respawn with penalty instead of game over
-            respawnWithPenalty('Car destroyed!');
+            if (multiplayerActive) {
+                // Multiplayer: Respawn at current position with penalty
+                respawnWithPenalty('Car destroyed!');
+            } else {
+                // Solo: Full restart at starting line
+                triggerSoloGameOver('Car destroyed!');
+            }
+        }
+
+        function triggerSoloGameOver(reason) {
+            gameOver = true;
+
+            const message = document.getElementById('message');
+            const restartHint = isMobile ? 'Tap ↺ to restart' : 'Press SPACE to restart';
+            message.innerHTML = `<span style="color: #ff6b6b;">${reason}</span><br>WASTED<br><span style="font-size: 24px">${restartHint}</span>`;
+            message.style.display = 'block';
+            message.style.color = '#ff6b6b';
         }
 
         function respawnWithPenalty(reason) {
@@ -3895,7 +3925,7 @@
 
             // Show penalty message
             const message = document.getElementById('message');
-            message.innerHTML = `<span style="color: #ff6b6b;">${reason}</span><br><span style="font-size: 24px;">2 SEC PENALTY</span>`;
+            message.innerHTML = `<span style="color: #ff6b6b;">${reason}</span><br><span style="font-size: 24px;">3 SEC PENALTY</span>`;
             message.style.display = 'block';
             message.style.color = '#ffff00';
 
@@ -3946,12 +3976,12 @@
             car.mesh.position.copy(car.position);
             car.mesh.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), car.rotation);
 
-            // Flash the car for 2 seconds
+            // Flash the car for 3 seconds
             let flashCount = 0;
             const flashInterval = setInterval(() => {
                 car.mesh.visible = !car.mesh.visible;
                 flashCount++;
-                if (flashCount >= 20) { // 20 flashes over 2 seconds (100ms each)
+                if (flashCount >= 30) { // 30 flashes over 3 seconds (100ms each)
                     clearInterval(flashInterval);
                     car.mesh.visible = true;
                     isPenaltyActive = false;

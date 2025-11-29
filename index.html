@@ -1274,7 +1274,10 @@
                 myPeerId = id; // Store our peer ID
                 // Connect to host
                 const joinConnTime = Date.now();
-                conn = peer.connect('rapid-racing-' + code, { reliable: true });
+                conn = peer.connect('rapid-racing-' + code, {
+                    reliable: true,
+                    serialization: 'json'  // Force JSON serialization - binary was causing issues
+                });
                 console.log('[JOINER ' + joinConnTime + '] Created connection to host');
 
                 if (!conn) {

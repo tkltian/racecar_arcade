@@ -1109,15 +1109,9 @@
             return Math.abs(hash);
         }
 
-        // ICE servers for WebRTC NAT traversal (STUN only - TURN caused issues)
+        // Use PeerJS defaults for ICE - custom config was causing issues
         const peerConfig = {
-            config: {
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' }
-                ]
-            },
-            debug: 0
+            debug: 1 // Low debug to see connection issues
         };
 
         function generateRoomCode() {

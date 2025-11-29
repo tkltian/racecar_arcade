@@ -1382,8 +1382,8 @@
                     if (data.type === 'connected') {
                     // Host confirmed connection
                     console.log('Connection confirmed by host:', data.hostId);
-                    // Start heartbeat only after confirmation
-                    startHeartbeat();
+                    // Heartbeat disabled - was causing connection issues
+                    // startHeartbeat();
                 } else if (data.type === 'ping') {
                     // Respond to keep-alive ping
                     if (conn && conn.open) {
